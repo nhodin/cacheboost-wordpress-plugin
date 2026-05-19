@@ -1,0 +1,71 @@
+# Dutch translation of CacheBoost Warmer
+# Copyright (C) 2026 CacheBoost
+msgid ""
+msgstr ""
+"Project-Id-Version: CacheBoost Warmer 1.0.0\n"
+"Report-Msgid-Bugs-To: support@cacheboost.io\n"
+"POT-Creation-Date: 2026-05-19 00:00+0000\n"
+"PO-Revision-Date: 2026-05-19 00:00+0000\n"
+"Language-Team: Dutch\n"
+"Language: nl_NL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "CacheBoost Warmer"
+msgstr "CacheBoost Warmer"
+
+msgid "Enable"
+msgstr "Inschakelen"
+
+msgid "Activate cache warming after purge events"
+msgstr "Cache-opwarming activeren na purge-gebeurtenissen"
+
+msgid "API Key"
+msgstr "API-sleutel"
+
+msgid "Format: cb_live_... — never shared with third parties."
+msgstr "Formaat: cb_live_... — nooit gedeeld met derden."
+
+msgid "Warming Mode"
+msgstr "Opwarmmodus"
+
+msgid "Smart — targeted by URL (recommended)"
+msgstr "Smart — gericht op URL (aanbevolen)"
+
+msgid "Full Only — always warm the entire site"
+msgstr "Full Only — altijd de volledige site opwarmen"
+
+msgid "Stock Warming"
+msgstr "Voorraad-opwarming"
+
+msgid "Warm product pages when stock changes (e.g. after an order)"
+msgstr "Productpagina's opwarmen bij voorraadwijzigingen (bijv. na een bestelling)"
+
+msgid "API Endpoint"
+msgstr "API-eindpunt"
+
+msgid "Do not change unless instructed by CacheBoost support."
+msgstr "Niet wijzigen tenzij de CacheBoost-ondersteuning dit aangeeft."
+
+msgid "Test Connection"
+msgstr "Verbinding testen"
+
+msgid "Testing…"
+msgstr "Testen…"
+
+msgid "Connection successful."
+msgstr "Verbinding geslaagd."
+
+msgid "Connection failed: %s"
+msgstr "Verbinding mislukt: %s"
+
+msgid "Request failed."
+msgstr "Verzoek mislukt."
+
+msgid "Invalid API key format."
+msgstr "Ongeldig API-sleutelformaat."
+
+msgid "Invalid API key. Expected format: cb_live_..."
+msgstr "Ongeldige API-sleutel. Verwacht formaat: cb_live_..."

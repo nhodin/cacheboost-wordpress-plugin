@@ -1,0 +1,19 @@
+{
+    "name": "cacheboost/wordpress-warmer-tests",
+    "description": "Unit tests for CacheBoost Warmer WordPress plugin",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5",
+        "brain/monkey": "^2.6"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CacheBoost\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {}
+    }
+}

@@ -1,0 +1,89 @@
+# Copyright (C) 2026 CacheBoost
+# This file is distributed under the MIT License.
+msgid ""
+msgstr ""
+"Project-Id-Version: CacheBoost Warmer 1.0.0\n"
+"Report-Msgid-Bugs-To: support@cacheboost.io\n"
+"POT-Creation-Date: 2026-05-19 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: CacheBoost\n"
+"X-Domain: cacheboost-warmer\n"
+
+#: admin/settings-page.php
+msgid "CacheBoost Warmer"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Enable"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Activate cache warming after purge events"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "API Key"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Format: cb_live_... — never shared with third parties."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Warming Mode"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Smart — targeted by URL (recommended)"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Full Only — always warm the entire site"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Stock Warming"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Warm product pages when stock changes (e.g. after an order)"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "API Endpoint"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Do not change unless instructed by CacheBoost support."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Test Connection"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Testing…"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Connection successful."
+msgstr ""
+
+#. translators: %s: error detail
+#: admin/settings-page.php
+msgid "Connection failed: %s"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Request failed."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Invalid API key format."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Invalid API key. Expected format: cb_live_..."
+msgstr ""

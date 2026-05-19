@@ -1,0 +1,71 @@
+# German translation of CacheBoost Warmer
+# Copyright (C) 2026 CacheBoost
+msgid ""
+msgstr ""
+"Project-Id-Version: CacheBoost Warmer 1.0.0\n"
+"Report-Msgid-Bugs-To: support@cacheboost.io\n"
+"POT-Creation-Date: 2026-05-19 00:00+0000\n"
+"PO-Revision-Date: 2026-05-19 00:00+0000\n"
+"Language-Team: German\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "CacheBoost Warmer"
+msgstr "CacheBoost Warmer"
+
+msgid "Enable"
+msgstr "Aktivieren"
+
+msgid "Activate cache warming after purge events"
+msgstr "Cache-Aufwärmung nach Purge-Ereignissen aktivieren"
+
+msgid "API Key"
+msgstr "API-Schlüssel"
+
+msgid "Format: cb_live_... — never shared with third parties."
+msgstr "Format: cb_live_... — wird nie an Dritte weitergegeben."
+
+msgid "Warming Mode"
+msgstr "Aufwärmmodus"
+
+msgid "Smart — targeted by URL (recommended)"
+msgstr "Smart — gezielt nach URL (empfohlen)"
+
+msgid "Full Only — always warm the entire site"
+msgstr "Full Only — immer die gesamte Website aufwärmen"
+
+msgid "Stock Warming"
+msgstr "Lagerbestand-Aufwärmung"
+
+msgid "Warm product pages when stock changes (e.g. after an order)"
+msgstr "Produktseiten bei Lagerbestandsänderungen aufwärmen (z. B. nach einer Bestellung)"
+
+msgid "API Endpoint"
+msgstr "API-Endpunkt"
+
+msgid "Do not change unless instructed by CacheBoost support."
+msgstr "Nicht ändern, es sei denn, der CacheBoost-Support weist Sie an."
+
+msgid "Test Connection"
+msgstr "Verbindung testen"
+
+msgid "Testing…"
+msgstr "Wird getestet…"
+
+msgid "Connection successful."
+msgstr "Verbindung erfolgreich."
+
+msgid "Connection failed: %s"
+msgstr "Verbindung fehlgeschlagen: %s"
+
+msgid "Request failed."
+msgstr "Anfrage fehlgeschlagen."
+
+msgid "Invalid API key format."
+msgstr "Ungültiges API-Schlüssel-Format."
+
+msgid "Invalid API key. Expected format: cb_live_..."
+msgstr "Ungültiger API-Schlüssel. Erwartetes Format: cb_live_..."

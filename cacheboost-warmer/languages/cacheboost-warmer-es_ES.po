@@ -1,0 +1,71 @@
+# Spanish translation of CacheBoost Warmer
+# Copyright (C) 2026 CacheBoost
+msgid ""
+msgstr ""
+"Project-Id-Version: CacheBoost Warmer 1.0.0\n"
+"Report-Msgid-Bugs-To: support@cacheboost.io\n"
+"POT-Creation-Date: 2026-05-19 00:00+0000\n"
+"PO-Revision-Date: 2026-05-19 00:00+0000\n"
+"Language-Team: Spanish\n"
+"Language: es_ES\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "CacheBoost Warmer"
+msgstr "CacheBoost Warmer"
+
+msgid "Enable"
+msgstr "Habilitar"
+
+msgid "Activate cache warming after purge events"
+msgstr "Activar el calentamiento de caché tras eventos de purga"
+
+msgid "API Key"
+msgstr "Clave API"
+
+msgid "Format: cb_live_... — never shared with third parties."
+msgstr "Formato: cb_live_... — nunca compartida con terceros."
+
+msgid "Warming Mode"
+msgstr "Modo de calentamiento"
+
+msgid "Smart — targeted by URL (recommended)"
+msgstr "Smart — por URL objetivo (recomendado)"
+
+msgid "Full Only — always warm the entire site"
+msgstr "Full Only — calentar siempre todo el sitio"
+
+msgid "Stock Warming"
+msgstr "Calentamiento por stock"
+
+msgid "Warm product pages when stock changes (e.g. after an order)"
+msgstr "Calentar páginas de productos cuando cambia el stock (p. ej. tras un pedido)"
+
+msgid "API Endpoint"
+msgstr "Punto de conexión API"
+
+msgid "Do not change unless instructed by CacheBoost support."
+msgstr "No modificar salvo indicación del soporte de CacheBoost."
+
+msgid "Test Connection"
+msgstr "Probar conexión"
+
+msgid "Testing…"
+msgstr "Probando…"
+
+msgid "Connection successful."
+msgstr "Conexión exitosa."
+
+msgid "Connection failed: %s"
+msgstr "Error de conexión: %s"
+
+msgid "Request failed."
+msgstr "Error en la solicitud."
+
+msgid "Invalid API key format."
+msgstr "Formato de clave API no válido."
+
+msgid "Invalid API key. Expected format: cb_live_..."
+msgstr "Clave API no válida. Formato esperado: cb_live_..."
