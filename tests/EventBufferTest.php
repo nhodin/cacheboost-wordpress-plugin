@@ -42,12 +42,20 @@ class EventBufferTest extends TestCase
         return (new ReflectionClass(EventBuffer::class))->getProperty($name)->getValue(null);
     }
 
+    // Stub only Logger's WP calls (get_option/update_option) for tests that don't
+    // exercise send() — used by all push_* tests since EventBuffer logs on every push.
+    private function stubLogger(): void
+    {
+        Functions\stubs(['get_option' => [], 'update_option' => true]);
+    }
+
     private function stubSendDependencies(): void
     {
         Functions\stubs([
-            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io'],
+            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io', 'site_id' => 42],
             'get_home_url'   => 'https://example.com',
             'wp_json_encode' => fn (mixed $data) => json_encode($data),
+            'update_option'  => true,
         ]);
     }
 
@@ -55,6 +63,7 @@ class EventBufferTest extends TestCase
 
     public function test_push_full_sets_mode_to_full(): void
     {
+        $this->stubLogger();
         (new EventBuffer())->push_full();
 
         self::assertSame('full', $this->getStatic('mode'));
@@ -62,6 +71,7 @@ class EventBufferTest extends TestCase
 
     public function test_push_full_registers_shutdown_hook(): void
     {
+        $this->stubLogger();
         Actions\expectAdded('shutdown')->once()->with(\Mockery::type('array'), 9999);
 
         (new EventBuffer())->push_full();
@@ -73,6 +83,7 @@ class EventBufferTest extends TestCase
 
     public function test_push_urls_accumulates_urls(): void
     {
+        $this->stubLogger();
         $buffer = new EventBuffer();
         $buffer->push_urls(['https://example.com/a/']);
         $buffer->push_urls(['https://example.com/b/']);
@@ -82,6 +93,7 @@ class EventBufferTest extends TestCase
 
     public function test_push_urls_deduplicates(): void
     {
+        $this->stubLogger();
         $buffer = new EventBuffer();
         $buffer->push_urls(['https://example.com/a/']);
         $buffer->push_urls(['https://example.com/a/', 'https://example.com/b/']);
@@ -91,6 +103,7 @@ class EventBufferTest extends TestCase
 
     public function test_push_urls_ignored_when_full_mode_already_set(): void
     {
+        $this->stubLogger();
         $buffer = new EventBuffer();
         $buffer->push_full();
         $buffer->push_urls(['https://example.com/page/']);
@@ -102,6 +115,7 @@ class EventBufferTest extends TestCase
 
     public function test_shutdown_registered_only_once_across_multiple_pushes(): void
     {
+        $this->stubLogger();
         // add_action('shutdown', ...) must be called exactly once even with several pushes
         Actions\expectAdded('shutdown')->once();
 

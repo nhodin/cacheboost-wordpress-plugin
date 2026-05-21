@@ -4,18 +4,21 @@ namespace CacheBoost;
 if (!defined('ABSPATH')) exit;
 
 class HooksNative {
-    public function __construct(private EventBuffer $buffer) {}
+    public function __construct(private EventBuffer $buffer, private Config $config) {}
 
     public function register(): void {
-        add_action('save_post',    [$this, 'on_save_post'], 10, 1);
-        add_action('deleted_post', [$this, 'on_save_post'], 10, 1);
-        add_action('edit_term',    [$this, 'on_edit_term'], 10, 3);
-
-        foreach (['switch_theme', 'wp_update_nav_menu', 'customize_save_after'] as $hook) {
-            add_action($hook, fn () => $this->buffer->push_full());
+        if ($this->config->is_smart_enabled()) {
+            add_action('save_post',    [$this, 'on_save_post'], 10, 1);
+            add_action('deleted_post', [$this, 'on_save_post'], 10, 1);
+            add_action('edit_term',    [$this, 'on_edit_term'], 10, 3);
         }
 
-        add_action('upgrader_process_complete', fn () => $this->buffer->push_full());
+        if ($this->config->is_full_enabled()) {
+            foreach (['switch_theme', 'wp_update_nav_menu', 'customize_save_after'] as $hook) {
+                add_action($hook, fn () => $this->buffer->push_full());
+            }
+            add_action('upgrader_process_complete', fn () => $this->buffer->push_full());
+        }
     }
 
     public function on_save_post(int $post_id): void {

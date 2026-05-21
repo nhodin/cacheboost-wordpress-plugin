@@ -42,9 +42,9 @@ Automatically triggers a CacheBoost cache warm-up whenever a flush or invalidati
 
 ### Step 1 — Get your API key
 
-1. Log in to [app.cacheboost.io](https://app.cacheboost.io).
-2. Go to **API Keys** → **New key**.
-3. Select the `boosts:write` scope (required to trigger warm-ups).
+1. Log in to [app.cache-boost.com](https://app.cache-boost.com).
+2. Go to your [profile](https://app.cache-boost.com/profile) and click **New API key**.
+3. Select the scopes: `sites:read`, `boosts:read`, `boosts:write`.
 4. Copy the generated key (format `cb_live_…`). It is shown only once.
 
 ---
@@ -59,7 +59,6 @@ Go to **Settings → CacheBoost**.
 | API Key | Your `cb_live_…` key |
 | Warming Mode | `Smart` (targeted by URL) or `Full Only` (always warm everything) |
 | Stock Warming | *(WooCommerce only)* Warm product pages when stock changes |
-| API Endpoint | Pre-filled — do not change unless instructed |
 | Test Connection | Validates your API key live |
 
 ---

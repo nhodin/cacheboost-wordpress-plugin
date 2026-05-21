@@ -10,6 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // at the top level and would require Brain Monkey to already be set up.
 $includes = __DIR__ . '/../cacheboost-warmer/includes';
 require_once $includes . '/class-config.php';
+require_once $includes . '/class-logger.php';
 require_once $includes . '/class-api-client.php';
 require_once $includes . '/class-event-buffer.php';
 require_once $includes . '/class-hooks-native.php';

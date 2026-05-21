@@ -33,9 +33,9 @@ CacheBoost Warmer automatically triggers a cache warm-up whenever a purge or inv
 
 = Step 1 — Get your API key =
 
-1. Log in to [app.cacheboost.io](https://app.cacheboost.io).
-2. Go to **API Keys** and click **New key**.
-3. Select the `boosts:write` scope (minimum required).
+1. Log in to [app.cache-boost.com](https://app.cache-boost.com).
+2. Go to your [profile](https://app.cache-boost.com/profile) and click **New API key**.
+3. Select the scopes: `sites:read`, `boosts:read`, `boosts:write`.
 4. Copy the generated key (format `cb_live_…`).
 
 = Step 2 — Configure the plugin =
@@ -82,7 +82,7 @@ Only the site URL, the list of page URLs to warm (Smart mode), and a timestamp. 
 
 == External Services ==
 
-This plugin sends data to the CacheBoost API (https://api.cacheboost.io) to trigger cache warming jobs after a purge event. Data transmitted includes the site URL and the list of page URLs to warm. No personal user data is sent.
+This plugin sends data to the CacheBoost API (https://api.cache-boost.com) to trigger cache warming jobs after a purge event. Data transmitted includes the site URL and the list of page URLs to warm. No personal user data is sent.
 
 Requests are only made when:
 - The plugin is enabled in Settings > CacheBoost

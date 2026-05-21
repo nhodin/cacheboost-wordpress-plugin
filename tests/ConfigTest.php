@@ -41,7 +41,8 @@ class ConfigTest extends TestCase
 
         self::assertFalse($config->is_enabled());
         self::assertSame('', $config->get_api_key());
-        self::assertSame('smart', $config->get_mode());
+        self::assertTrue($config->is_smart_enabled());
+        self::assertTrue($config->is_full_enabled());
         self::assertFalse($config->is_stock_warming_enabled());
         self::assertSame('https://api.cacheboost.io', $config->get_api_endpoint());
     }
@@ -65,16 +66,28 @@ class ConfigTest extends TestCase
         self::assertSame('cb_live_abc123', $this->makeConfig(['api_key' => 'cb_live_abc123'])->get_api_key());
     }
 
-    // ── get_mode ──────────────────────────────────────────────────────────────
+    // ── is_smart_enabled ─────────────────────────────────────────────────────
 
-    public function test_get_mode_defaults_to_smart(): void
+    public function test_smart_enabled_by_default(): void
     {
-        self::assertSame('smart', $this->makeConfig([])->get_mode());
+        self::assertTrue($this->makeConfig([])->is_smart_enabled());
     }
 
-    public function test_get_mode_returns_full_only_when_set(): void
+    public function test_smart_disabled_when_set_false(): void
     {
-        self::assertSame('full_only', $this->makeConfig(['mode' => 'full_only'])->get_mode());
+        self::assertFalse($this->makeConfig(['smart_enabled' => false])->is_smart_enabled());
+    }
+
+    // ── is_full_enabled ──────────────────────────────────────────────────────
+
+    public function test_full_enabled_by_default(): void
+    {
+        self::assertTrue($this->makeConfig([])->is_full_enabled());
+    }
+
+    public function test_full_disabled_when_set_false(): void
+    {
+        self::assertFalse($this->makeConfig(['full_enabled' => false])->is_full_enabled());
     }
 
     // ── is_stock_warming_enabled ──────────────────────────────────────────────

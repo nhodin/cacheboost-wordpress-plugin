@@ -28,9 +28,10 @@ class ApiClientTest extends TestCase
     private function stubCanNotify(bool $enabled = true, string $key = 'cb_live_abc123'): void
     {
         Functions\stubs([
-            'get_option'     => ['enabled' => $enabled, 'api_key' => $key, 'api_endpoint' => 'https://api.cacheboost.io'],
+            'get_option'     => ['enabled' => $enabled, 'api_key' => $key, 'api_endpoint' => 'https://api.cacheboost.io', 'site_id' => 42],
             'get_home_url'   => 'https://example.com',
             'wp_json_encode' => fn (mixed $data) => json_encode($data),
+            'update_option'  => true,
         ]);
     }
 
@@ -94,7 +95,22 @@ class ApiClientTest extends TestCase
 
         ApiClient::send(['event' => 'flush_all']);
 
-        $this->addToAssertionCount(1); // assertion is the Mockery ->never() expectation above
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_send_does_nothing_when_site_id_missing(): void
+    {
+        Functions\stubs([
+            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io'],
+            'get_home_url'   => 'https://example.com',
+            'wp_json_encode' => fn (mixed $data) => json_encode($data),
+            'update_option'  => true,
+        ]);
+        Functions\expect('wp_remote_post')->never();
+
+        ApiClient::send(['event' => 'flush_all']);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_send_posts_to_v1_warm_endpoint(): void
@@ -104,7 +120,7 @@ class ApiClientTest extends TestCase
         Functions\expect('wp_remote_post')
             ->once()
             ->andReturnUsing(function (string $url, array $args): array {
-                self::assertSame('https://api.cacheboost.io/v1/warm', $url);
+                self::assertSame('https://api.cacheboost.io/v1/sites/42/warm', $url);
                 self::assertFalse($args['blocking']);
                 return [];
             });
@@ -148,9 +164,15 @@ class ApiClientTest extends TestCase
 
     public function test_ping_returns_success_on_200(): void
     {
-        Functions\expect('wp_remote_get')->once()->andReturn([]);
-        Functions\expect('is_wp_error')->once()->andReturn(false);
-        Functions\expect('wp_remote_retrieve_response_code')->once()->andReturn(200);
+        // ping() calls /v1/me then /v1/sites — two HTTP calls, both succeed
+        Functions\stubs([
+            'get_option'                       => [],
+            'update_option'                    => true,
+            'wp_remote_get'                    => [],
+            'is_wp_error'                      => false,
+            'wp_remote_retrieve_response_code' => 200,
+            'wp_remote_retrieve_body'          => '{"scopes":["sites:read"],"regions":["us"]}',
+        ]);
 
         $result = ApiClient::ping('cb_live_abc123', 'https://api.cacheboost.io');
 
@@ -160,6 +182,8 @@ class ApiClientTest extends TestCase
     /** @dataProvider nonSuccessStatusProvider */
     public function test_ping_returns_error_on_non_200(int $status): void
     {
+        // Early return after /v1/me fails — only one HTTP call
+        Functions\stubs(['get_option' => [], 'update_option' => true]);
         Functions\expect('wp_remote_get')->once()->andReturn([]);
         Functions\expect('is_wp_error')->once()->andReturn(false);
         Functions\expect('wp_remote_retrieve_response_code')->once()->andReturn($status);
@@ -184,6 +208,7 @@ class ApiClientTest extends TestCase
         $wpError = \Mockery::mock('WP_Error');
         $wpError->shouldReceive('get_error_message')->andReturn('cURL error: could not connect');
 
+        Functions\stubs(['get_option' => [], 'update_option' => true]);
         Functions\expect('wp_remote_get')->once()->andReturn($wpError);
         Functions\expect('is_wp_error')->once()->andReturn(true);
 
@@ -195,14 +220,23 @@ class ApiClientTest extends TestCase
 
     public function test_ping_strips_trailing_slash_from_endpoint(): void
     {
+        // Verify trailing slash on endpoint doesn't produce double-slash in URL
+        $callCount = 0;
+        Functions\stubs([
+            'get_option'                       => [],
+            'update_option'                    => true,
+            'is_wp_error'                      => false,
+            'wp_remote_retrieve_response_code' => 200,
+            'wp_remote_retrieve_body'          => '{"scopes":[],"regions":[]}',
+        ]);
         Functions\expect('wp_remote_get')
-            ->once()
-            ->andReturnUsing(function (string $url): array {
-                self::assertSame('https://api.cacheboost.io/v1/ping', $url);
+            ->times(2)
+            ->andReturnUsing(function (string $url) use (&$callCount): array {
+                if ($callCount++ === 0) {
+                    self::assertSame('https://api.cacheboost.io/v1/me', $url);
+                }
                 return [];
             });
-        Functions\expect('is_wp_error')->once()->andReturn(false);
-        Functions\expect('wp_remote_retrieve_response_code')->once()->andReturn(200);
 
         ApiClient::ping('cb_live_abc123', 'https://api.cacheboost.io/');
     }
