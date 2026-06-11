@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: CacheBoost Warmer
- * Plugin URI:  https://www.cache-boost.com
+ * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
  * Version:     1.0.0
  * Requires at least: 6.0
