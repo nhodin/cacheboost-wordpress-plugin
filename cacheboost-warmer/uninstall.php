@@ -1,33 +1,33 @@
 <?php
 if (!defined('WP_UNINSTALL_PLUGIN')) exit;
 
-$options = [
+$cacheboost_options = [
     'cacheboost_options',
     'cacheboost_logs',
     'cacheboost_notice_dismissed',
     'cacheboost_last_flush',
 ];
 
-$transients = [
+$cacheboost_transients = [
     'cacheboost_widget_data',
 ];
 
-foreach ($options as $option) {
-    delete_option($option);
+foreach ($cacheboost_options as $cacheboost_option) {
+    delete_option($cacheboost_option);
 }
 
-foreach ($transients as $transient) {
-    delete_transient($transient);
+foreach ($cacheboost_transients as $cacheboost_transient) {
+    delete_transient($cacheboost_transient);
 }
 
 if (is_multisite()) {
-    foreach (get_sites(['fields' => 'ids']) as $site_id) {
-        switch_to_blog($site_id);
-        foreach ($options as $option) {
-            delete_option($option);
+    foreach (get_sites(['fields' => 'ids']) as $cacheboost_site_id) {
+        switch_to_blog($cacheboost_site_id);
+        foreach ($cacheboost_options as $cacheboost_option) {
+            delete_option($cacheboost_option);
         }
-        foreach ($transients as $transient) {
-            delete_transient($transient);
+        foreach ($cacheboost_transients as $cacheboost_transient) {
+            delete_transient($cacheboost_transient);
         }
         restore_current_blog();
     }

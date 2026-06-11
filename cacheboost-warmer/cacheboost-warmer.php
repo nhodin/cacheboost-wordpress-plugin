@@ -30,14 +30,6 @@ require_once CACHEBOOST_PLUGIN_DIR . 'admin/settings-page.php';
 require_once CACHEBOOST_PLUGIN_DIR . 'admin/history-page.php';
 require_once CACHEBOOST_PLUGIN_DIR . 'admin/dashboard-widget.php';
 
-add_action('plugins_loaded', function () {
-    load_plugin_textdomain(
-        'cacheboost-warmer',
-        false,
-        dirname(plugin_basename(__FILE__)) . '/languages'
-    );
-});
-
 register_activation_hook(__FILE__, function () {
     if (!get_option('cacheboost_notice_dismissed')) {
         update_option('cacheboost_notice_dismissed', '0');
@@ -74,7 +66,7 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function (array $
     $settings_link = sprintf(
         '<a href="%s">%s</a>',
         esc_url(admin_url('admin.php?page=cacheboost')),
-        __('Settings')
+        __('Settings', 'cacheboost-warmer')
     );
     array_unshift($links, $settings_link);
     return $links;
@@ -91,7 +83,7 @@ add_action('admin_footer', function () {
         $(document).on('click', '#cacheboost-setup-notice .notice-dismiss', function(){
             $.post(ajaxurl, {
                 action: 'cacheboost_dismiss_notice',
-                nonce: '<?php echo wp_create_nonce('cacheboost_dismiss_notice'); ?>'
+                nonce: '<?php echo esc_js(wp_create_nonce('cacheboost_dismiss_notice')); ?>'
             });
         });
     })(jQuery);
@@ -180,11 +172,10 @@ function cacheboost_render_last_flush(): void {
                     <?php endforeach; ?>
                 </ul>
                 <p class="description" style="margin-top:6px">
-                    <?php printf(
-                        /* translators: %d: number of URLs */
-                        _n('%d URL warmed', '%d URLs warmed', count($urls), 'cacheboost-warmer'),
-                        count($urls)
-                    ); ?>
+                    <?php
+                    /* translators: %d: number of URLs */
+                    echo esc_html(sprintf(_n('%d URL warmed', '%d URLs warmed', count($urls), 'cacheboost-warmer'), count($urls)));
+                    ?>
                 </p>
             <?php endif; ?>
         <?php endif; ?>

@@ -90,7 +90,7 @@ function cacheboost_render_history_page(): void {
                     <tr>
                         <td>
                             <a href="<?php echo esc_url('https://app.cache-boost.com/boosts/run/' . $run_id); ?>" target="_blank" rel="noopener">
-                                #<?php echo $run_id; ?>
+                                #<?php echo absint($run_id); ?>
                             </a>
                         </td>
                         <td>

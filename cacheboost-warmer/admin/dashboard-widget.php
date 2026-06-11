@@ -93,7 +93,7 @@ function cacheboost_render_dashboard_widget(): void {
             <div style="margin-bottom:14px">
                 <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
                     <span style="color:#374151;font-weight:600"><?php esc_html_e('URLs warmed', 'cacheboost-warmer'); ?></span>
-                    <span style="font-size:20px;font-weight:700;color:#111827"><?php echo number_format_i18n($total); ?></span>
+                    <span style="font-size:20px;font-weight:700;color:#111827"><?php echo esc_html(number_format_i18n($total)); ?></span>
                 </div>
             </div>
 
@@ -110,8 +110,10 @@ function cacheboost_render_dashboard_widget(): void {
                     <div style="height:8px;border-radius:4px;width:<?php echo esc_attr($hit_rate); ?>%;background:<?php echo $hit_rate >= 80 ? '#10b981' : ($hit_rate >= 50 ? '#f59e0b' : '#ef4444'); ?>;transition:width .3s"></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#6b7280">
-                    <span><?php printf(esc_html__('%d HIT', 'cacheboost-warmer'), $hits); ?></span>
-                    <span><?php printf(esc_html__('%d MISS', 'cacheboost-warmer'), $misses); ?></span>
+                    <?php // translators: %d: number of cache hits ?>
+                    <span><?php echo esc_html(sprintf(__('%d HIT', 'cacheboost-warmer'), $hits)); ?></span>
+                    <?php // translators: %d: number of cache misses ?>
+                    <span><?php echo esc_html(sprintf(__('%d MISS', 'cacheboost-warmer'), $misses)); ?></span>
                 </div>
             </div>
             <?php endif; ?>
@@ -161,7 +163,7 @@ function cacheboost_render_dashboard_widget(): void {
             </a>
             <?php if ($run_id): ?>
             <a href="<?php echo esc_url('https://app.cache-boost.com/boosts/run/' . $run_id); ?>" target="_blank" rel="noopener" style="font-size:12px;color:#6b7280;text-decoration:none">
-                #<?php echo $run_id; ?> ↗
+                #<?php echo absint($run_id); ?> ↗
             </a>
             <?php endif; ?>
         </div>
