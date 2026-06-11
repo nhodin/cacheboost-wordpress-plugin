@@ -1,17 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-add_action('admin_menu', function () {
-    add_submenu_page(
-        'options-general.php',
-        __('CacheBoost History', 'cacheboost-warmer'),
-        __('CacheBoost History', 'cacheboost-warmer'),
-        'manage_options',
-        'cacheboost-history',
-        'cacheboost_render_history_page'
-    );
-});
-
 function cacheboost_render_history_page(): void {
     if (!current_user_can('manage_options')) return;
 
@@ -23,10 +12,13 @@ function cacheboost_render_history_page(): void {
         <div class="wrap">
             <h1><?php esc_html_e('CacheBoost — Run History', 'cacheboost-warmer'); ?></h1>
             <div class="notice notice-warning inline"><p>
-                <?php printf(
-                    /* translators: %s: link to settings page */
-                    __('Please <a href="%s">configure your API key</a> first.', 'cacheboost-warmer'),
-                    esc_url(admin_url('options-general.php?page=cacheboost'))
+                <?php echo wp_kses(
+                    sprintf(
+                        /* translators: %s: link to settings page */
+                        __('Please <a href="%s">configure your API key</a> first.', 'cacheboost-warmer'),
+                        esc_url(admin_url('admin.php?page=cacheboost'))
+                    ),
+                    ['a' => ['href' => []]]
                 ); ?>
             </p></div>
         </div>
@@ -50,12 +42,12 @@ function cacheboost_render_history_page(): void {
     ];
     ?>
     <div class="wrap">
-        <h1 style="display:flex;align-items:center;gap:12px;">
-            <?php esc_html_e('CacheBoost — Run History', 'cacheboost-warmer'); ?>
+        <?php cacheboost_render_admin_header(__('CacheBoost — Run History', 'cacheboost-warmer')); ?>
+        <div style="margin-bottom:16px;">
             <a href="<?php echo esc_url(add_query_arg([])); ?>" class="button button-secondary">
                 ↻ <?php esc_html_e('Refresh', 'cacheboost-warmer'); ?>
             </a>
-        </h1>
+        </div>
 
         <?php if ($error !== null): ?>
             <div class="notice notice-error inline"><p><?php echo esc_html($error); ?></p></div>
@@ -126,6 +118,8 @@ function cacheboost_render_history_page(): void {
                 <?php esc_html_e('View full history in CacheBoost dashboard →', 'cacheboost-warmer'); ?>
             </a>
         </p>
+
+        <?php cacheboost_render_last_flush(); ?>
     </div>
     <?php
 }

@@ -15,8 +15,8 @@ CacheBoost Warmer automatically triggers a cache warm-up whenever a purge or inv
 
 **Features:**
 
-* **Smart mode** — resolves purged post/term URLs and triggers a targeted warm (only the affected pages).
-* **Full Only mode** — always triggers a full site warming.
+* **Smart warming** — resolves purged post/term URLs and triggers a targeted warm (only the affected pages).
+* **Full warming** — triggers a full site warming on global events (theme switch, plugin upgrade, full cache purge).
 * **Deduplication** — multiple purge events within the same HTTP request produce a single API call.
 * **Non-blocking** — uses `wp_remote_post()` with `blocking => false`; never delays a WordPress request.
 * **WooCommerce** — warms product and category pages on save; optional stock-change warming.
@@ -27,7 +27,7 @@ CacheBoost Warmer automatically triggers a cache warm-up whenever a purge or inv
 
 1. Upload the `cacheboost-warmer` folder to `wp-content/plugins/`.
 2. Activate the plugin via **Plugins → Installed Plugins**.
-3. Go to **Settings → CacheBoost** and enter your API key.
+3. Go to the **CacheBoost** menu in the admin sidebar and enter your API key.
 
 == Configuration ==
 
@@ -35,16 +35,16 @@ CacheBoost Warmer automatically triggers a cache warm-up whenever a purge or inv
 
 1. Log in to [app.cache-boost.com](https://app.cache-boost.com).
 2. Go to your [profile](https://app.cache-boost.com/profile) and click **New API key**.
-3. Select the scopes: `sites:read`, `boosts:read`, `boosts:write`.
+3. Select the scopes: `sites:read`, `boosts:read`, `boosts:write`, `runs:read`.
 4. Copy the generated key (format `cb_live_…`).
 
 = Step 2 — Configure the plugin =
 
-Go to **Settings → CacheBoost**:
+Go to the **CacheBoost** menu:
 
 * **Enable** — master on/off switch.
 * **API Key** — paste your `cb_live_...` key.
-* **Warming Mode** — Smart (recommended) or Full Only.
+* **Warming triggers** — Smart (targeted URLs) and/or Full (entire site), each can be toggled independently.
 * **Stock Warming** — (WooCommerce only) warm product pages after stock changes.
 * **Test Connection** — validate your API key without leaving the admin.
 
@@ -65,7 +65,7 @@ No. The plugin is completely silent until both **Enable** is checked and a valid
 
 = Does this plugin slow down my WordPress admin? =
 
-No. All API calls are fire-and-forget (`blocking => false`). The CacheBoost API never blocks a WordPress request.
+No. Warming notifications are fire-and-forget (`blocking => false`) and never delay a request. The dashboard widget and history page fetch stats from the API; widget results are cached for a couple of minutes.
 
 = Does it work on multisite? =
 
@@ -85,8 +85,8 @@ Only the site URL, the list of page URLs to warm (Smart mode), and a timestamp. 
 This plugin sends data to the CacheBoost API (https://api.cache-boost.com) to trigger cache warming jobs after a purge event. Data transmitted includes the site URL and the list of page URLs to warm. No personal user data is sent.
 
 Requests are only made when:
-- The plugin is enabled in Settings > CacheBoost
+- The plugin is enabled in the CacheBoost settings
 - A valid API key (format: cb_live_...) has been configured
 
-CacheBoost Terms of Service: https://cacheboost.io/terms
-CacheBoost Privacy Policy:   https://cacheboost.io/privacy
+CacheBoost Terms of Service: https://cache-boost.com/terms
+CacheBoost Privacy Policy:   https://cache-boost.com/privacy

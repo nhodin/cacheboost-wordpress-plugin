@@ -23,13 +23,10 @@ class ApiClientTest extends TestCase
         parent::tearDown();
     }
 
-    // Stub the WP functions that Config + ApiClient::send() call, so tests that
-    // exercise send() don't have to repeat the boilerplate every time.
     private function stubCanNotify(bool $enabled = true, string $key = 'cb_live_abc123'): void
     {
         Functions\stubs([
-            'get_option'     => ['enabled' => $enabled, 'api_key' => $key, 'api_endpoint' => 'https://api.cacheboost.io', 'site_id' => 42],
-            'get_home_url'   => 'https://example.com',
+            'get_option'     => ['enabled' => $enabled, 'api_key' => $key, 'api_endpoint' => 'https://api.cacheboost.io'],
             'wp_json_encode' => fn (mixed $data) => json_encode($data),
             'update_option'  => true,
         ]);
@@ -86,34 +83,29 @@ class ApiClientTest extends TestCase
         self::assertTrue(ApiClient::can_notify());
     }
 
-    // ── send ──────────────────────────────────────────────────────────────────
+    // ── trigger_warm ─────────────────────────────────────────────────────────
 
-    public function test_send_does_nothing_when_disabled(): void
+    public function test_trigger_warm_does_nothing_when_disabled(): void
     {
         Functions\expect('get_option')->once()->andReturn(['enabled' => false, 'api_key' => 'cb_live_abc123']);
         Functions\expect('wp_remote_post')->never();
 
-        ApiClient::send(['event' => 'flush_all']);
+        ApiClient::trigger_warm(42, ['https://example.com/page/']);
 
         $this->addToAssertionCount(1);
     }
 
-    public function test_send_does_nothing_when_site_id_missing(): void
+    public function test_trigger_warm_does_nothing_when_site_id_zero(): void
     {
-        Functions\stubs([
-            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io'],
-            'get_home_url'   => 'https://example.com',
-            'wp_json_encode' => fn (mixed $data) => json_encode($data),
-            'update_option'  => true,
-        ]);
+        $this->stubCanNotify();
         Functions\expect('wp_remote_post')->never();
 
-        ApiClient::send(['event' => 'flush_all']);
+        ApiClient::trigger_warm(0, ['https://example.com/page/']);
 
         $this->addToAssertionCount(1);
     }
 
-    public function test_send_posts_to_v1_warm_endpoint(): void
+    public function test_trigger_warm_posts_to_correct_endpoint(): void
     {
         $this->stubCanNotify();
 
@@ -125,10 +117,10 @@ class ApiClientTest extends TestCase
                 return [];
             });
 
-        ApiClient::send(['event' => 'flush_all']);
+        ApiClient::trigger_warm(42, ['https://example.com/page/']);
     }
 
-    public function test_send_adds_bearer_authorization_header(): void
+    public function test_trigger_warm_adds_bearer_authorization_header(): void
     {
         $this->stubCanNotify();
 
@@ -139,10 +131,10 @@ class ApiClientTest extends TestCase
                 return [];
             });
 
-        ApiClient::send(['event' => 'flush_all']);
+        ApiClient::trigger_warm(42, ['https://example.com/page/']);
     }
 
-    public function test_send_payload_contains_event_site_url_and_timestamp(): void
+    public function test_trigger_warm_payload_contains_urls_without_event(): void
     {
         $this->stubCanNotify();
 
@@ -150,14 +142,40 @@ class ApiClientTest extends TestCase
             ->once()
             ->andReturnUsing(function (string $url, array $args): array {
                 $body = json_decode($args['body'], true);
-                self::assertSame('flush_by_url', $body['event']);
-                self::assertSame('https://example.com', $body['site_url']);
-                self::assertArrayHasKey('timestamp', $body);
                 self::assertSame(['https://example.com/page/'], $body['urls']);
+                self::assertArrayNotHasKey('event', $body);
+                self::assertArrayNotHasKey('site_url', $body);
                 return [];
             });
 
-        ApiClient::send(['event' => 'flush_by_url', 'urls' => ['https://example.com/page/']]);
+        ApiClient::trigger_warm(42, ['https://example.com/page/']);
+    }
+
+    // ── trigger_boost_run ─────────────────────────────────────────────────────
+
+    public function test_trigger_boost_run_does_nothing_when_boost_id_zero(): void
+    {
+        Functions\expect('get_option')->once()->andReturn(['enabled' => true, 'api_key' => 'cb_live_abc123']);
+        Functions\expect('wp_remote_post')->never();
+
+        ApiClient::trigger_boost_run(0);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_trigger_boost_run_posts_to_correct_endpoint(): void
+    {
+        $this->stubCanNotify();
+
+        Functions\expect('wp_remote_post')
+            ->once()
+            ->andReturnUsing(function (string $url, array $args): array {
+                self::assertSame('https://api.cacheboost.io/v1/boosts/5/run', $url);
+                self::assertFalse($args['blocking']);
+                return [];
+            });
+
+        ApiClient::trigger_boost_run(5);
     }
 
     // ── ping ──────────────────────────────────────────────────────────────────

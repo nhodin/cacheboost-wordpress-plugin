@@ -52,8 +52,7 @@ class EventBufferTest extends TestCase
     private function stubSendDependencies(): void
     {
         Functions\stubs([
-            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io', 'site_id' => 42],
-            'get_home_url'   => 'https://example.com',
+            'get_option'     => ['enabled' => true, 'api_key' => 'cb_live_abc123', 'api_endpoint' => 'https://api.cacheboost.io', 'site_id' => 42, 'boost_id' => 5],
             'wp_json_encode' => fn (mixed $data) => json_encode($data),
             'update_option'  => true,
         ]);
@@ -135,9 +134,9 @@ class EventBufferTest extends TestCase
 
         Functions\expect('wp_remote_post')
             ->once()
-            ->andReturnUsing(function (string $_url, array $args): array {
-                $body = json_decode($args['body'], true);
-                self::assertSame('flush_all', $body['event']);
+            ->andReturnUsing(function (string $url, array $args): array {
+                self::assertSame('https://api.cacheboost.io/v1/boosts/5/run', $url);
+                self::assertFalse($args['blocking']);
                 return [];
             });
 
@@ -152,10 +151,11 @@ class EventBufferTest extends TestCase
 
         Functions\expect('wp_remote_post')
             ->once()
-            ->andReturnUsing(function (string $_url, array $args): array {
+            ->andReturnUsing(function (string $url, array $args): array {
+                self::assertSame('https://api.cacheboost.io/v1/sites/42/warm', $url);
                 $body = json_decode($args['body'], true);
-                self::assertSame('flush_by_url', $body['event']);
                 self::assertSame(['https://example.com/page/'], $body['urls']);
+                self::assertArrayNotHasKey('event', $body);
                 return [];
             });
 

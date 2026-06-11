@@ -5,10 +5,11 @@ $options = [
     'cacheboost_options',
     'cacheboost_logs',
     'cacheboost_notice_dismissed',
+    'cacheboost_last_flush',
 ];
 
 $transients = [
-    'cacheboost_test_connection',
+    'cacheboost_widget_data',
 ];
 
 foreach ($options as $option) {

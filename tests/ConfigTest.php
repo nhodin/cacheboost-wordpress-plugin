@@ -39,12 +39,12 @@ class ConfigTest extends TestCase
     {
         $config = $this->makeConfig([]);
 
-        self::assertFalse($config->is_enabled());
+        self::assertTrue($config->is_enabled());
         self::assertSame('', $config->get_api_key());
         self::assertTrue($config->is_smart_enabled());
         self::assertTrue($config->is_full_enabled());
         self::assertFalse($config->is_stock_warming_enabled());
-        self::assertSame('https://api.cacheboost.io', $config->get_api_endpoint());
+        self::assertSame('https://api.cache-boost.com', $config->get_api_endpoint());
     }
 
     // ── is_enabled ───────────────────────────────────────────────────────────

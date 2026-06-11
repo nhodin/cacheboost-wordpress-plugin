@@ -1,16 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-add_action('admin_menu', function () {
-    add_options_page(
-        __('CacheBoost Warmer', 'cacheboost-warmer'),
-        'CacheBoost',
-        'manage_options',
-        'cacheboost',
-        'cacheboost_render_settings_page'
-    );
-});
-
 add_action('admin_init', function () {
     register_setting('cacheboost_settings', 'cacheboost_options', [
         'sanitize_callback' => 'cacheboost_sanitize_options',
@@ -18,6 +8,32 @@ add_action('admin_init', function () {
 });
 
 add_action('wp_ajax_cacheboost_test_connection', 'cacheboost_ajax_test_connection');
+add_action('wp_ajax_cacheboost_fetch_boosts',   'cacheboost_ajax_fetch_boosts');
+
+function cacheboost_ajax_fetch_boosts(): void {
+    check_ajax_referer('cacheboost_test_nonce', 'nonce');
+    if (!current_user_can('manage_options')) wp_die();
+
+    $options = get_option('cacheboost_options', []);
+    $api_key = $options['api_key'] ?? '';
+    $site_id = $options['site_id'] ?? null;
+
+    if (!\CacheBoost\ApiClient::is_valid_api_key($api_key)) {
+        wp_send_json_error(['code' => 'no_api_key']);
+    }
+
+    if (!$site_id) {
+        wp_send_json_error(['code' => 'no_site_id']);
+    }
+
+    $result = \CacheBoost\ApiClient::fetch_boosts_for_site($api_key, (int) $site_id);
+
+    if (!$result['success']) {
+        wp_send_json_error(['code' => 'api_error', 'message' => $result['message'] ?? '']);
+    }
+
+    wp_send_json_success(['boosts' => $result['boosts']]);
+}
 
 function cacheboost_ajax_test_connection(): void {
     check_ajax_referer('cacheboost_test_nonce', 'nonce');
@@ -121,7 +137,10 @@ function cacheboost_sanitize_options(array $input): array {
     $output['smart_enabled'] = !empty($input['smart_enabled']);
     $output['full_enabled']  = !empty($input['full_enabled']);
 
-    $output['stock_warming'] = !empty($input['stock_warming']);
+    $output['boost_id'] = max(0, (int) ($input['boost_id'] ?? 0));
+
+    $output['stock_warming']    = !empty($input['stock_warming']);
+    $output['dashboard_widget'] = !empty($input['dashboard_widget']);
 
     $output['api_endpoint'] = 'https://api.cache-boost.com';
 
@@ -142,6 +161,9 @@ function cacheboost_sanitize_options(array $input): array {
     }
     if (($old['stock_warming'] ?? false) !== $output['stock_warming']) {
         $changes[] = 'stock_warming: ' . ($output['stock_warming'] ? 'yes' : 'no');
+    }
+    if (($old['boost_id'] ?? 0) !== $output['boost_id']) {
+        $changes[] = 'boost_id: ' . ($output['boost_id'] ?: '(none)');
     }
 
     $current    = get_option('cacheboost_options', []);
@@ -193,22 +215,7 @@ function cacheboost_sanitize_options(array $input): array {
 function cacheboost_render_settings_page(): void {
     if (!current_user_can('manage_options')) return;
 
-    $options = get_option('cacheboost_options', []);
-    $api_key = $options['api_key'] ?? '';
-
-    if (\CacheBoost\ApiClient::is_valid_api_key($api_key)) {
-        $me_resp = wp_remote_get('https://api.cache-boost.com/v1/me', [
-            'timeout' => 5,
-            'headers' => ['Authorization' => 'Bearer ' . $api_key],
-        ]);
-        if (!is_wp_error($me_resp) && wp_remote_retrieve_response_code($me_resp) === 200) {
-            $me = json_decode(wp_remote_retrieve_body($me_resp), true);
-            if (!empty($me['regions'])) {
-                $options['available_regions'] = $me['regions'];
-                update_option('cacheboost_options', $options);
-            }
-        }
-    }
+    $options = get_option('cacheboost_options', ['enabled' => true]);
 
     $nonce             = wp_create_nonce('cacheboost_test_nonce');
     $clear_logs_nonce  = wp_create_nonce('cacheboost_clear_logs_nonce');
@@ -224,7 +231,7 @@ function cacheboost_render_settings_page(): void {
     $region_labels = ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'];
     ?>
     <div class="wrap">
-        <h1><?php esc_html_e('CacheBoost Warmer', 'cacheboost-warmer'); ?></h1>
+        <?php cacheboost_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>
         <?php settings_errors('cacheboost_options'); ?>
 
         <form method="post" action="options.php">
@@ -237,7 +244,7 @@ function cacheboost_render_settings_page(): void {
                     <td>
                         <label>
                             <input type="checkbox" name="cacheboost_options[enabled]" value="1"
-                                <?php checked(!empty($options['enabled'])); ?> />
+                                <?php checked($options['enabled'] ?? true); ?> />
                             <?php esc_html_e('Activate cache warming after purge events', 'cacheboost-warmer'); ?>
                         </label>
                     </td>
@@ -253,10 +260,13 @@ function cacheboost_render_settings_page(): void {
                                class="regular-text" placeholder="cb_live_..." autocomplete="off" />
                         <p class="description">
                             <?php
-                            printf(
-                                /* translators: %s: link to CacheBoost profile page */
-                                __('Required scopes: <code>sites:read</code>, <code>boosts:read</code>, <code>boosts:write</code>, <code>runs:read</code>. Generate your API key in your <a href="%s" target="_blank" rel="noopener">CacheBoost profile</a>.', 'cacheboost-warmer'),
-                                'https://app.cache-boost.com/profile'
+                            echo wp_kses(
+                                sprintf(
+                                    /* translators: %s: link to CacheBoost profile page */
+                                    __('Required scopes: <code>sites:read</code>, <code>boosts:read</code>, <code>boosts:write</code>, <code>runs:read</code>. Generate your API key in your <a href="%s" target="_blank" rel="noopener">CacheBoost profile</a>.', 'cacheboost-warmer'),
+                                    'https://app.cache-boost.com/profile'
+                                ),
+                                ['code' => [], 'a' => ['href' => [], 'target' => [], 'rel' => []]]
                             );
                             ?>
                         </p>
@@ -284,6 +294,31 @@ function cacheboost_render_settings_page(): void {
                     </td>
                 </tr>
 
+                <tr>
+                    <th scope="row">
+                        <label for="cb_boost_id"><?php esc_html_e('Full Warming Boost', 'cacheboost-warmer'); ?></label>
+                    </th>
+                    <td>
+                        <select id="cb_boost_id" name="cacheboost_options[boost_id]" disabled>
+                            <option value=""><?php esc_html_e('Loading…', 'cacheboost-warmer'); ?></option>
+                        </select>
+                        <p class="description">
+                            <?php esc_html_e('The scheduled Boost to run on full cache flushes (theme switch, plugin upgrade, full purge). Required for Full warming to work.', 'cacheboost-warmer'); ?>
+                        </p>
+                        <p id="cb-no-boost-msg" style="display:none">
+                            <?php
+                            printf(
+                                /* translators: %s: link to create a boost */
+                                esc_html__('No boosts found for this site. %s', 'cacheboost-warmer'),
+                                '<a href="https://app.cache-boost.com/boosts/create" target="_blank" rel="noopener">'
+                                    . esc_html__('Create a Boost', 'cacheboost-warmer')
+                                . '</a>'
+                            );
+                            ?>
+                        </p>
+                    </td>
+                </tr>
+
                 <?php if (class_exists('WooCommerce')): ?>
                 <tr>
                     <th scope="row"><?php esc_html_e('Stock Warming', 'cacheboost-warmer'); ?></th>
@@ -296,6 +331,17 @@ function cacheboost_render_settings_page(): void {
                     </td>
                 </tr>
                 <?php endif; ?>
+
+                <tr>
+                    <th scope="row"><?php esc_html_e('Dashboard Widget', 'cacheboost-warmer'); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="cacheboost_options[dashboard_widget]" value="1"
+                                <?php checked($options['dashboard_widget'] ?? true); ?> />
+                            <?php esc_html_e('Show last warming run stats on the WordPress dashboard', 'cacheboost-warmer'); ?>
+                        </label>
+                    </td>
+                </tr>
 
                 <tr id="cb-regions-row">
                     <th scope="row"><?php esc_html_e('Warm Regions', 'cacheboost-warmer'); ?></th>
@@ -391,8 +437,87 @@ function cacheboost_render_settings_page(): void {
         <?php endif; ?>
     </details>
 
+    <?php cacheboost_render_last_flush(); ?>
+
     <script>
     (function () {
+        // ── Boost dropdown ────────────────────────────────────────────────────
+
+        var boostSelect = document.getElementById('cb_boost_id');
+        var noBoostEl   = document.getElementById('cb-no-boost-msg');
+        var savedBoostId = <?php echo wp_json_encode((string) ($options['boost_id'] ?? '')); ?>;
+        var boostI18n = {
+            loading:     <?php echo wp_json_encode(__('Loading…', 'cacheboost-warmer')); ?>,
+            noApiKey:    <?php echo wp_json_encode(__('Save a valid API key first.', 'cacheboost-warmer')); ?>,
+            noSiteId:    <?php echo wp_json_encode(__('Test the connection first to identify your site.', 'cacheboost-warmer')); ?>,
+            loadFailed:  <?php echo wp_json_encode(__('Failed to load boosts.', 'cacheboost-warmer')); ?>,
+            noBoosts:    <?php echo wp_json_encode(__('No boosts found for this site.', 'cacheboost-warmer')); ?>,
+            stale:       <?php echo wp_json_encode(__('Previously selected boost no longer exists.', 'cacheboost-warmer')); ?>,
+        };
+
+        function loadBoosts() {
+            boostSelect.disabled = true;
+            boostSelect.innerHTML = '<option value="">' + boostI18n.loading + '</option>';
+            noBoostEl.style.display = 'none';
+
+            var fd = new FormData();
+            fd.append('action', 'cacheboost_fetch_boosts');
+            fd.append('nonce',  <?php echo wp_json_encode($nonce); ?>);
+
+            fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, {
+                method: 'POST', body: fd, credentials: 'same-origin',
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                if (!json.success) {
+                    var code = json.data ? json.data.code : 'api_error';
+                    var msg  = code === 'no_api_key' ? boostI18n.noApiKey
+                             : code === 'no_site_id' ? boostI18n.noSiteId
+                             : boostI18n.loadFailed;
+                    boostSelect.innerHTML = '<option value="">' + msg + '</option>';
+                    boostSelect.disabled = true;
+                    return;
+                }
+                populateBoosts(json.data.boosts || []);
+            })
+            .catch(function () {
+                boostSelect.innerHTML = '<option value="">' + boostI18n.loadFailed + '</option>';
+                boostSelect.disabled = false;
+            });
+        }
+
+        function populateBoosts(boosts) {
+            boostSelect.innerHTML = '';
+            if (boosts.length === 0) {
+                boostSelect.innerHTML = '<option value="">' + boostI18n.noBoosts + '</option>';
+                boostSelect.disabled = true;
+                noBoostEl.style.display = 'block';
+                return;
+            }
+
+            var found = false;
+            boosts.forEach(function (boost) {
+                var opt = document.createElement('option');
+                opt.value = boost.id;
+                opt.textContent = boost.name + ' (#' + boost.id + ')';
+                if (String(boost.id) === savedBoostId) { opt.selected = true; found = true; }
+                boostSelect.appendChild(opt);
+            });
+
+            if (!found && savedBoostId) {
+                var stale = document.createElement('option');
+                stale.value = '';
+                stale.textContent = boostI18n.stale;
+                stale.selected = true;
+                boostSelect.insertBefore(stale, boostSelect.firstChild);
+            }
+            boostSelect.disabled = false;
+        }
+
+        if (boostSelect) loadBoosts();
+
+        // ── Test connection ───────────────────────────────────────────────────
+
         var btn    = document.getElementById('cb-test-connection');
         var result = document.getElementById('cb-test-result');
 
@@ -455,6 +580,12 @@ function cacheboost_render_settings_page(): void {
             });
         }
 
+        function cbEsc(s) {
+            return String(s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
         function cbRenderRegions(available) {
             var labels = <?php echo wp_json_encode($region_labels); ?>;
             // Read the current checked state from the live form (not the PHP-baked saved state)
@@ -467,8 +598,8 @@ function cacheboost_render_settings_page(): void {
                 var label = labels[slug] || slug.toUpperCase();
                 var checked = selected.indexOf(slug) !== -1 ? ' checked' : '';
                 html += '<label style="margin-right:16px">'
-                      + '<input type="checkbox" name="cacheboost_options[regions][]" value="' + slug + '"' + checked + '> '
-                      + label + '</label>';
+                      + '<input type="checkbox" name="cacheboost_options[regions][]" value="' + cbEsc(slug) + '"' + checked + '> '
+                      + cbEsc(label) + '</label>';
             });
             html += '</fieldset>';
             html += '<p class="description">'

@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: CacheBoost Warmer 1.0.0\n"
-"Report-Msgid-Bugs-To: support@cacheboost.io\n"
+"Report-Msgid-Bugs-To: contact@cache-boost.com\n"
 "POT-Creation-Date: 2026-05-19 00:00+0000\n"
 "PO-Revision-Date: 2026-05-19 00:00+0000\n"
 "Language-Team: French\n"

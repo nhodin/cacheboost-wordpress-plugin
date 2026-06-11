@@ -43,14 +43,39 @@ class EventBuffer {
         self::$flushed = true;
 
         if (self::$mode === 'full') {
-            Logger::log('buffer', 'Flush sent: flush_all');
-            ApiClient::send(['event' => 'flush_all']);
-        } elseif (!empty(self::$urls)) {
+            $config   = new Config();
+            if (!$config->is_full_enabled()) {
+                Logger::log('buffer', 'Full flush skipped — full warming is disabled');
+                return;
+            }
+            $boost_id = $config->get_boost_id();
+            if ($boost_id <= 0) {
+                Logger::log('buffer', 'Full flush skipped — no Boost ID configured. Select a Boost in settings.', 'error');
+                return;
+            }
+            update_option('cacheboost_last_flush', ['ts' => time(), 'mode' => 'full', 'urls' => []]);
+            Logger::log('buffer', sprintf('Flush sent: full — boost run #%d', $boost_id));
+            ApiClient::trigger_boost_run($boost_id);
+            return;
+        }
+
+        if (!empty(self::$urls)) {
             $count   = count(self::$urls);
             $preview = array_slice(self::$urls, 0, 3);
             $suffix  = $count > 3 ? sprintf(' (+%d more)', $count - 3) : '';
-            Logger::log('buffer', sprintf('Flush sent: flush_by_url — %d URL(s): %s%s', $count, implode(', ', $preview), $suffix));
-            ApiClient::send(['event' => 'flush_by_url', 'urls' => self::$urls]);
+            $config = new Config();
+            if (!$config->is_smart_enabled()) {
+                Logger::log('buffer', 'Smart flush skipped — smart warming is disabled');
+                return;
+            }
+            $site_id = $config->get_site_id();
+            if ($site_id === null) {
+                Logger::log('buffer', 'Smart flush skipped — site_id not resolved. Test the connection in settings.', 'error');
+                return;
+            }
+            update_option('cacheboost_last_flush', ['ts' => time(), 'mode' => 'smart', 'urls' => self::$urls]);
+            Logger::log('buffer', sprintf('Flush sent: smart — %d URL(s): %s%s', $count, implode(', ', $preview), $suffix));
+            ApiClient::trigger_warm($site_id, self::$urls);
         }
     }
 }
