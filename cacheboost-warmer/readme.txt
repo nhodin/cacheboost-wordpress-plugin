@@ -1,5 +1,5 @@
 === CacheBoost Warmer ===
-Contributors: cacheboost
+Contributors: nhodin
 Tags: cache, cache warming, performance, WooCommerce, WP Rocket
 Requires at least: 6.0
 Tested up to: 7.0
@@ -89,4 +89,4 @@ Requests are only made when:
 - A valid API key (format: cb_live_...) has been configured
 
 CacheBoost Terms of Service: https://cache-boost.com/terms
-CacheBoost Privacy Policy:   https://cache-boost.com/privacy
+CacheBoost Privacy Policy:   https://cache-boost.com/terms

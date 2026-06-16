@@ -10,6 +10,47 @@ add_action('admin_init', function () {
 add_action('wp_ajax_cacheboost_test_connection', 'cacheboost_ajax_test_connection');
 add_action('wp_ajax_cacheboost_fetch_boosts',   'cacheboost_ajax_fetch_boosts');
 
+add_action('admin_enqueue_scripts', 'cacheboost_enqueue_settings_assets');
+
+function cacheboost_enqueue_settings_assets(string $hook): void {
+    if ($hook !== 'toplevel_page_cacheboost') return;
+
+    $options           = get_option('cacheboost_options', ['enabled' => true]);
+    $available_regions = $options['available_regions'] ?? [];
+    $selected_regions  = $options['regions'] ?? [];
+    if (empty($selected_regions) && in_array('us', $available_regions, true)) {
+        $selected_regions = ['us'];
+    }
+
+    wp_enqueue_script(
+        'cacheboost-settings',
+        plugins_url('js/settings.js', __FILE__),
+        [],
+        CACHEBOOST_VERSION,
+        true
+    );
+    wp_localize_script('cacheboost-settings', 'CacheBoostSettings', [
+        'ajaxUrl'         => admin_url('admin-ajax.php'),
+        'nonce'           => wp_create_nonce('cacheboost_test_nonce'),
+        'clearLogsNonce'  => wp_create_nonce('cacheboost_clear_logs_nonce'),
+        'savedBoostId'    => (string) ($options['boost_id'] ?? ''),
+        'regionLabels'    => ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'],
+        'selectedRegions' => $selected_regions,
+        'i18n'            => [
+            'loading'       => __('Loading…', 'cacheboost-warmer'),
+            'noApiKey'      => __('Save a valid API key first.', 'cacheboost-warmer'),
+            'noSiteId'      => __('Test the connection first to identify your site.', 'cacheboost-warmer'),
+            'loadFailed'    => __('Failed to load boosts.', 'cacheboost-warmer'),
+            'noBoosts'      => __('No boosts found for this site.', 'cacheboost-warmer'),
+            'stale'         => __('Previously selected boost no longer exists.', 'cacheboost-warmer'),
+            'testing'       => __('Testing…', 'cacheboost-warmer'),
+            'requestFailed' => __('Request failed.', 'cacheboost-warmer'),
+            'noActivity'    => __('No activity logged yet.', 'cacheboost-warmer'),
+            'regionsHelp'   => __('Select which regions will warm your cache. Leave all unchecked to use every available region.', 'cacheboost-warmer'),
+        ],
+    ]);
+}
+
 function cacheboost_ajax_fetch_boosts(): void {
     check_ajax_referer('cacheboost_test_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die();
@@ -217,8 +258,6 @@ function cacheboost_render_settings_page(): void {
 
     $options = get_option('cacheboost_options', ['enabled' => true]);
 
-    $nonce             = wp_create_nonce('cacheboost_test_nonce');
-    $clear_logs_nonce  = wp_create_nonce('cacheboost_clear_logs_nonce');
     $smart_enabled     = $options['smart_enabled'] ?? true;
     $full_enabled      = $options['full_enabled']  ?? true;
     $available_regions = $options['available_regions'] ?? [];
@@ -438,176 +477,5 @@ function cacheboost_render_settings_page(): void {
     </details>
 
     <?php cacheboost_render_last_flush(); ?>
-
-    <script>
-    (function () {
-        // ── Boost dropdown ────────────────────────────────────────────────────
-
-        var boostSelect = document.getElementById('cb_boost_id');
-        var noBoostEl   = document.getElementById('cb-no-boost-msg');
-        var savedBoostId = <?php echo wp_json_encode((string) ($options['boost_id'] ?? '')); ?>;
-        var boostI18n = {
-            loading:     <?php echo wp_json_encode(__('Loading…', 'cacheboost-warmer')); ?>,
-            noApiKey:    <?php echo wp_json_encode(__('Save a valid API key first.', 'cacheboost-warmer')); ?>,
-            noSiteId:    <?php echo wp_json_encode(__('Test the connection first to identify your site.', 'cacheboost-warmer')); ?>,
-            loadFailed:  <?php echo wp_json_encode(__('Failed to load boosts.', 'cacheboost-warmer')); ?>,
-            noBoosts:    <?php echo wp_json_encode(__('No boosts found for this site.', 'cacheboost-warmer')); ?>,
-            stale:       <?php echo wp_json_encode(__('Previously selected boost no longer exists.', 'cacheboost-warmer')); ?>,
-        };
-
-        function loadBoosts() {
-            boostSelect.disabled = true;
-            boostSelect.innerHTML = '<option value="">' + boostI18n.loading + '</option>';
-            noBoostEl.style.display = 'none';
-
-            var fd = new FormData();
-            fd.append('action', 'cacheboost_fetch_boosts');
-            fd.append('nonce',  <?php echo wp_json_encode($nonce); ?>);
-
-            fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, {
-                method: 'POST', body: fd, credentials: 'same-origin',
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (json) {
-                if (!json.success) {
-                    var code = json.data ? json.data.code : 'api_error';
-                    var msg  = code === 'no_api_key' ? boostI18n.noApiKey
-                             : code === 'no_site_id' ? boostI18n.noSiteId
-                             : boostI18n.loadFailed;
-                    boostSelect.innerHTML = '<option value="">' + msg + '</option>';
-                    boostSelect.disabled = true;
-                    return;
-                }
-                populateBoosts(json.data.boosts || []);
-            })
-            .catch(function () {
-                boostSelect.innerHTML = '<option value="">' + boostI18n.loadFailed + '</option>';
-                boostSelect.disabled = false;
-            });
-        }
-
-        function populateBoosts(boosts) {
-            boostSelect.innerHTML = '';
-            if (boosts.length === 0) {
-                boostSelect.innerHTML = '<option value="">' + boostI18n.noBoosts + '</option>';
-                boostSelect.disabled = true;
-                noBoostEl.style.display = 'block';
-                return;
-            }
-
-            var found = false;
-            boosts.forEach(function (boost) {
-                var opt = document.createElement('option');
-                opt.value = boost.id;
-                opt.textContent = boost.name + ' (#' + boost.id + ')';
-                if (String(boost.id) === savedBoostId) { opt.selected = true; found = true; }
-                boostSelect.appendChild(opt);
-            });
-
-            if (!found && savedBoostId) {
-                var stale = document.createElement('option');
-                stale.value = '';
-                stale.textContent = boostI18n.stale;
-                stale.selected = true;
-                boostSelect.insertBefore(stale, boostSelect.firstChild);
-            }
-            boostSelect.disabled = false;
-        }
-
-        if (boostSelect) loadBoosts();
-
-        // ── Test connection ───────────────────────────────────────────────────
-
-        var btn    = document.getElementById('cb-test-connection');
-        var result = document.getElementById('cb-test-result');
-
-        btn.addEventListener('click', function () {
-            btn.disabled     = true;
-            result.textContent = <?php echo wp_json_encode(__('Testing…', 'cacheboost-warmer')); ?>;
-            result.style.color = '';
-
-            var data = new FormData();
-            data.append('action', 'cacheboost_test_connection');
-            data.append('nonce',  <?php echo wp_json_encode($nonce); ?>);
-
-            fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, {
-                method: 'POST',
-                body: data,
-                credentials: 'same-origin',
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (json) {
-                if (json.success) {
-                    result.textContent = json.data.message;
-                    result.style.color = 'green';
-                    if (json.data.regions && json.data.regions.length > 0) {
-                        cbRenderRegions(json.data.regions);
-                    }
-                } else {
-                    result.textContent = json.data.message;
-                    result.style.color = '#cc0000';
-                }
-            })
-            .catch(function () {
-                result.textContent = <?php echo wp_json_encode(__('Request failed.', 'cacheboost-warmer')); ?>;
-                result.style.color = '#cc0000';
-            })
-            .finally(function () {
-                btn.disabled = false;
-            });
-        });
-
-        var clearBtn = document.getElementById('cb-clear-logs');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', function () {
-                clearBtn.disabled = true;
-                var data = new FormData();
-                data.append('action', 'cacheboost_clear_logs');
-                data.append('nonce',  <?php echo wp_json_encode($clear_logs_nonce); ?>);
-                fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, {
-                    method: 'POST',
-                    body: data,
-                    credentials: 'same-origin',
-                }).then(function () {
-                    document.getElementById('cb-logs-accordion').querySelector('table')?.remove();
-                    clearBtn.remove();
-                    var acc = document.getElementById('cb-logs-accordion');
-                    var p = document.createElement('p');
-                    p.className = 'description';
-                    p.textContent = <?php echo wp_json_encode(__('No activity logged yet.', 'cacheboost-warmer')); ?>;
-                    acc.appendChild(p);
-                });
-            });
-        }
-
-        function cbEsc(s) {
-            return String(s).replace(/[&<>"']/g, function (c) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-            });
-        }
-
-        function cbRenderRegions(available) {
-            var labels = <?php echo wp_json_encode($region_labels); ?>;
-            // Read the current checked state from the live form (not the PHP-baked saved state)
-            var currentChecked = Array.from(document.querySelectorAll('input[name="cacheboost_options[regions][]"]:checked')).map(function(el) { return el.value; });
-            var saved = <?php echo wp_json_encode($selected_regions); ?>;
-            var selected = currentChecked.length > 0 ? currentChecked : saved;
-            var td = document.querySelector('#cb-regions-row td');
-            var html = '<fieldset>';
-            available.forEach(function (slug) {
-                var label = labels[slug] || slug.toUpperCase();
-                var checked = selected.indexOf(slug) !== -1 ? ' checked' : '';
-                html += '<label style="margin-right:16px">'
-                      + '<input type="checkbox" name="cacheboost_options[regions][]" value="' + cbEsc(slug) + '"' + checked + '> '
-                      + cbEsc(label) + '</label>';
-            });
-            html += '</fieldset>';
-            html += '<p class="description">'
-                  + <?php echo wp_json_encode(__('Select which regions will warm your cache. Leave all unchecked to use every available region.', 'cacheboost-warmer')); ?>
-                  + '</p>';
-            td.innerHTML = html;
-        }
-    })();
-    </script>
     <?php
 }

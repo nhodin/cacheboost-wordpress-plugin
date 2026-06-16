@@ -72,23 +72,22 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function (array $
     return $links;
 });
 
-add_action('admin_footer', function () {
+add_action('admin_enqueue_scripts', function () {
     if (!current_user_can('manage_options')) return;
     if (get_option('cacheboost_notice_dismissed') === '1') return;
     $options = get_option('cacheboost_options', []);
     if (!empty($options['api_key'])) return;
-    ?>
-    <script>
-    (function($){
-        $(document).on('click', '#cacheboost-setup-notice .notice-dismiss', function(){
-            $.post(ajaxurl, {
-                action: 'cacheboost_dismiss_notice',
-                nonce: '<?php echo esc_js(wp_create_nonce('cacheboost_dismiss_notice')); ?>'
-            });
-        });
-    })(jQuery);
-    </script>
-    <?php
+
+    wp_enqueue_script(
+        'cacheboost-notice',
+        plugins_url('admin/js/notice-dismiss.js', __FILE__),
+        ['jquery'],
+        CACHEBOOST_VERSION,
+        true
+    );
+    wp_localize_script('cacheboost-notice', 'CacheBoostNotice', [
+        'nonce' => wp_create_nonce('cacheboost_dismiss_notice'),
+    ]);
 });
 
 add_action('init', function () {
