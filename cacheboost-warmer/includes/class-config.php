@@ -1,5 +1,5 @@
 <?php
-namespace CacheBoost;
+namespace CacheBoostWarmer;
 
 if (!defined('ABSPATH')) exit;
 
@@ -7,7 +7,7 @@ class Config {
     private array $options;
 
     public function __construct() {
-        $this->options = get_option('cacheboost_options', []);
+        $this->options = get_option('cbwarmer_options', []);
     }
 
     public function is_enabled(): bool {

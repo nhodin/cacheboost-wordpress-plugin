@@ -1,10 +1,10 @@
 <?php
-namespace CacheBoost;
+namespace CacheBoostWarmer;
 
 if (!defined('ABSPATH')) exit;
 
 class Logger {
-    private const OPTION   = 'cacheboost_logs';
+    private const OPTION   = 'cbwarmer_logs';
     private const MAX_LOGS = 100;
 
     public static function log(string $channel, string $message, string $level = 'info'): void {

@@ -1,8 +1,8 @@
 (function ($) {
-    $(document).on('click', '#cacheboost-setup-notice .notice-dismiss', function () {
+    $(document).on('click', '#cbwarmer-setup-notice .notice-dismiss', function () {
         $.post(ajaxurl, {
-            action: 'cacheboost_dismiss_notice',
-            nonce: CacheBoostNotice.nonce
+            action: 'cbwarmer_dismiss_notice',
+            nonce: CacheBoostWarmerNotice.nonce
         });
     });
 })(jQuery);

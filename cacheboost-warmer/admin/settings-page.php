@@ -2,20 +2,20 @@
 if (!defined('ABSPATH')) exit;
 
 add_action('admin_init', function () {
-    register_setting('cacheboost_settings', 'cacheboost_options', [
-        'sanitize_callback' => 'cacheboost_sanitize_options',
+    register_setting('cbwarmer_settings', 'cbwarmer_options', [
+        'sanitize_callback' => 'cbwarmer_sanitize_options',
     ]);
 });
 
-add_action('wp_ajax_cacheboost_test_connection', 'cacheboost_ajax_test_connection');
-add_action('wp_ajax_cacheboost_fetch_boosts',   'cacheboost_ajax_fetch_boosts');
+add_action('wp_ajax_cbwarmer_test_connection', 'cbwarmer_ajax_test_connection');
+add_action('wp_ajax_cbwarmer_fetch_boosts',   'cbwarmer_ajax_fetch_boosts');
 
-add_action('admin_enqueue_scripts', 'cacheboost_enqueue_settings_assets');
+add_action('admin_enqueue_scripts', 'cbwarmer_enqueue_settings_assets');
 
-function cacheboost_enqueue_settings_assets(string $hook): void {
-    if ($hook !== 'toplevel_page_cacheboost') return;
+function cbwarmer_enqueue_settings_assets(string $hook): void {
+    if ($hook !== 'toplevel_page_cbwarmer') return;
 
-    $options           = get_option('cacheboost_options', ['enabled' => true]);
+    $options           = get_option('cbwarmer_options', ['enabled' => true]);
     $available_regions = $options['available_regions'] ?? [];
     $selected_regions  = $options['regions'] ?? [];
     if (empty($selected_regions) && in_array('us', $available_regions, true)) {
@@ -23,16 +23,16 @@ function cacheboost_enqueue_settings_assets(string $hook): void {
     }
 
     wp_enqueue_script(
-        'cacheboost-settings',
+        'cbwarmer-settings',
         plugins_url('js/settings.js', __FILE__),
         [],
-        CACHEBOOST_VERSION,
+        CBWARMER_VERSION,
         true
     );
-    wp_localize_script('cacheboost-settings', 'CacheBoostSettings', [
+    wp_localize_script('cbwarmer-settings', 'CacheBoostWarmerSettings', [
         'ajaxUrl'         => admin_url('admin-ajax.php'),
-        'nonce'           => wp_create_nonce('cacheboost_test_nonce'),
-        'clearLogsNonce'  => wp_create_nonce('cacheboost_clear_logs_nonce'),
+        'nonce'           => wp_create_nonce('cbwarmer_test_nonce'),
+        'clearLogsNonce'  => wp_create_nonce('cbwarmer_clear_logs_nonce'),
         'savedBoostId'    => (string) ($options['boost_id'] ?? ''),
         'regionLabels'    => ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'],
         'selectedRegions' => $selected_regions,
@@ -51,15 +51,15 @@ function cacheboost_enqueue_settings_assets(string $hook): void {
     ]);
 }
 
-function cacheboost_ajax_fetch_boosts(): void {
-    check_ajax_referer('cacheboost_test_nonce', 'nonce');
+function cbwarmer_ajax_fetch_boosts(): void {
+    check_ajax_referer('cbwarmer_test_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die();
 
-    $options = get_option('cacheboost_options', []);
+    $options = get_option('cbwarmer_options', []);
     $api_key = $options['api_key'] ?? '';
     $site_id = $options['site_id'] ?? null;
 
-    if (!\CacheBoost\ApiClient::is_valid_api_key($api_key)) {
+    if (!\CacheBoostWarmer\ApiClient::is_valid_api_key($api_key)) {
         wp_send_json_error(['code' => 'no_api_key']);
     }
 
@@ -67,7 +67,7 @@ function cacheboost_ajax_fetch_boosts(): void {
         wp_send_json_error(['code' => 'no_site_id']);
     }
 
-    $result = \CacheBoost\ApiClient::fetch_boosts_for_site($api_key, (int) $site_id);
+    $result = \CacheBoostWarmer\ApiClient::fetch_boosts_for_site($api_key, (int) $site_id);
 
     if (!$result['success']) {
         wp_send_json_error(['code' => 'api_error', 'message' => $result['message'] ?? '']);
@@ -76,19 +76,19 @@ function cacheboost_ajax_fetch_boosts(): void {
     wp_send_json_success(['boosts' => $result['boosts']]);
 }
 
-function cacheboost_ajax_test_connection(): void {
-    check_ajax_referer('cacheboost_test_nonce', 'nonce');
+function cbwarmer_ajax_test_connection(): void {
+    check_ajax_referer('cbwarmer_test_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die();
 
-    $options  = get_option('cacheboost_options', []);
+    $options  = get_option('cbwarmer_options', []);
     $api_key  = $options['api_key'] ?? '';
     $endpoint = 'https://api.cache-boost.com';
 
-    if (!\CacheBoost\ApiClient::is_valid_api_key($api_key)) {
+    if (!\CacheBoostWarmer\ApiClient::is_valid_api_key($api_key)) {
         wp_send_json_error(['message' => __('Invalid API key format.', 'cacheboost-warmer')]);
     }
 
-    $result = \CacheBoost\ApiClient::ping($api_key, $endpoint);
+    $result = \CacheBoostWarmer\ApiClient::ping($api_key, $endpoint);
 
     if ($result['success']) {
         $scopes   = $result['scopes'] ?? [];
@@ -129,10 +129,10 @@ function cacheboost_ajax_test_connection(): void {
         }
 
         // Persist site_id and available regions so send() and the form work without re-testing
-        $opts = get_option('cacheboost_options', []);
+        $opts = get_option('cbwarmer_options', []);
         $opts['available_regions'] = $result['regions'] ?? [];
         $opts['site_id'] = $matched['id'] ?? null;
-        update_option('cacheboost_options', $opts);
+        update_option('cbwarmer_options', $opts);
 
         wp_send_json_success([
             'message' => __('Connection successful. Scopes and site access verified.', 'cacheboost-warmer'),
@@ -147,17 +147,17 @@ function cacheboost_ajax_test_connection(): void {
     }
 }
 
-add_action('wp_ajax_cacheboost_clear_logs', 'cacheboost_ajax_clear_logs');
+add_action('wp_ajax_cbwarmer_clear_logs', 'cbwarmer_ajax_clear_logs');
 
-function cacheboost_ajax_clear_logs(): void {
-    check_ajax_referer('cacheboost_clear_logs_nonce', 'nonce');
+function cbwarmer_ajax_clear_logs(): void {
+    check_ajax_referer('cbwarmer_clear_logs_nonce', 'nonce');
     if (!current_user_can('manage_options')) wp_die();
-    \CacheBoost\Logger::clear();
+    \CacheBoostWarmer\Logger::clear();
     wp_send_json_success();
 }
 
-function cacheboost_sanitize_options(array $input): array {
-    $old    = get_option('cacheboost_options', []);
+function cbwarmer_sanitize_options(array $input): array {
+    $old    = get_option('cbwarmer_options', []);
     $output = [];
 
     $output['enabled'] = !empty($input['enabled']);
@@ -168,7 +168,7 @@ function cacheboost_sanitize_options(array $input): array {
     } else {
         $output['api_key'] = '';
         add_settings_error(
-            'cacheboost_options',
+            'cbwarmer_options',
             'invalid_api_key',
             __('Invalid API key. Expected format: cb_live_...', 'cacheboost-warmer'),
             'error'
@@ -207,12 +207,12 @@ function cacheboost_sanitize_options(array $input): array {
         $changes[] = 'boost_id: ' . ($output['boost_id'] ?: '(none)');
     }
 
-    $current    = get_option('cacheboost_options', []);
+    $current    = get_option('cbwarmer_options', []);
     $key_changed = ($old['api_key'] ?? '') !== ($output['api_key'] ?? '');
 
     if ($key_changed && !empty($output['api_key'])) {
         // Resolve site_id and regions immediately so send() works without clicking "Test Connection"
-        $ping = \CacheBoost\ApiClient::ping($output['api_key'], $output['api_endpoint']);
+        $ping = \CacheBoostWarmer\ApiClient::ping($output['api_key'], $output['api_endpoint']);
         if ($ping['success']) {
             $home_domain = (string) preg_replace('#^https?://#', '', rtrim(home_url(), '/'));
             $matched_site = null;
@@ -247,16 +247,16 @@ function cacheboost_sanitize_options(array $input): array {
     }
 
     if (!empty($changes)) {
-        \CacheBoost\Logger::log('settings', 'Settings saved — ' . implode(', ', $changes));
+        \CacheBoostWarmer\Logger::log('settings', 'Settings saved — ' . implode(', ', $changes));
     }
 
     return $output;
 }
 
-function cacheboost_render_settings_page(): void {
+function cbwarmer_render_settings_page(): void {
     if (!current_user_can('manage_options')) return;
 
-    $options = get_option('cacheboost_options', ['enabled' => true]);
+    $options = get_option('cbwarmer_options', ['enabled' => true]);
 
     $smart_enabled     = $options['smart_enabled'] ?? true;
     $full_enabled      = $options['full_enabled']  ?? true;
@@ -270,11 +270,11 @@ function cacheboost_render_settings_page(): void {
     $region_labels = ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'];
     ?>
     <div class="wrap">
-        <?php cacheboost_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>
-        <?php settings_errors('cacheboost_options'); ?>
+        <?php cbwarmer_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>
+        <?php settings_errors('cbwarmer_options'); ?>
 
         <form method="post" action="options.php">
-            <?php settings_fields('cacheboost_settings'); ?>
+            <?php settings_fields('cbwarmer_settings'); ?>
 
             <table class="form-table" role="presentation">
 
@@ -282,7 +282,7 @@ function cacheboost_render_settings_page(): void {
                     <th scope="row"><?php esc_html_e('Enable', 'cacheboost-warmer'); ?></th>
                     <td>
                         <label>
-                            <input type="checkbox" name="cacheboost_options[enabled]" value="1"
+                            <input type="checkbox" name="cbwarmer_options[enabled]" value="1"
                                 <?php checked($options['enabled'] ?? true); ?> />
                             <?php esc_html_e('Activate cache warming after purge events', 'cacheboost-warmer'); ?>
                         </label>
@@ -294,7 +294,7 @@ function cacheboost_render_settings_page(): void {
                         <label for="cb_api_key"><?php esc_html_e('API Key', 'cacheboost-warmer'); ?></label>
                     </th>
                     <td>
-                        <input type="text" id="cb_api_key" name="cacheboost_options[api_key]"
+                        <input type="text" id="cb_api_key" name="cbwarmer_options[api_key]"
                                value="<?php echo esc_attr($options['api_key'] ?? ''); ?>"
                                class="regular-text" placeholder="cb_live_..." autocomplete="off" />
                         <p class="description">
@@ -317,14 +317,14 @@ function cacheboost_render_settings_page(): void {
                     <td>
                         <fieldset>
                             <label>
-                                <input type="checkbox" name="cacheboost_options[smart_enabled]" value="1"
+                                <input type="checkbox" name="cbwarmer_options[smart_enabled]" value="1"
                                     <?php checked($smart_enabled); ?> />
                                 <strong><?php esc_html_e('Smart', 'cacheboost-warmer'); ?></strong>
                             </label>
                             <p class="description"><?php esc_html_e('Warms only the affected URLs when a post or term is saved, or when a cache plugin purges a specific page.', 'cacheboost-warmer'); ?></p>
                             <br>
                             <label>
-                                <input type="checkbox" name="cacheboost_options[full_enabled]" value="1"
+                                <input type="checkbox" name="cbwarmer_options[full_enabled]" value="1"
                                     <?php checked($full_enabled); ?> />
                                 <strong><?php esc_html_e('Full', 'cacheboost-warmer'); ?></strong>
                             </label>
@@ -338,7 +338,7 @@ function cacheboost_render_settings_page(): void {
                         <label for="cb_boost_id"><?php esc_html_e('Full Warming Boost', 'cacheboost-warmer'); ?></label>
                     </th>
                     <td>
-                        <select id="cb_boost_id" name="cacheboost_options[boost_id]" disabled>
+                        <select id="cb_boost_id" name="cbwarmer_options[boost_id]" disabled>
                             <option value=""><?php esc_html_e('Loading…', 'cacheboost-warmer'); ?></option>
                         </select>
                         <p class="description">
@@ -363,7 +363,7 @@ function cacheboost_render_settings_page(): void {
                     <th scope="row"><?php esc_html_e('Stock Warming', 'cacheboost-warmer'); ?></th>
                     <td>
                         <label>
-                            <input type="checkbox" name="cacheboost_options[stock_warming]" value="1"
+                            <input type="checkbox" name="cbwarmer_options[stock_warming]" value="1"
                                 <?php checked(!empty($options['stock_warming'])); ?> />
                             <?php esc_html_e('Warm product pages when stock changes (e.g. after an order)', 'cacheboost-warmer'); ?>
                         </label>
@@ -375,7 +375,7 @@ function cacheboost_render_settings_page(): void {
                     <th scope="row"><?php esc_html_e('Dashboard Widget', 'cacheboost-warmer'); ?></th>
                     <td>
                         <label>
-                            <input type="checkbox" name="cacheboost_options[dashboard_widget]" value="1"
+                            <input type="checkbox" name="cbwarmer_options[dashboard_widget]" value="1"
                                 <?php checked($options['dashboard_widget'] ?? true); ?> />
                             <?php esc_html_e('Show last warming run stats on the WordPress dashboard', 'cacheboost-warmer'); ?>
                         </label>
@@ -396,7 +396,7 @@ function cacheboost_render_settings_page(): void {
                                 ?>
                                 <label style="margin-right:16px">
                                     <input type="checkbox"
-                                           name="cacheboost_options[regions][]"
+                                           name="cbwarmer_options[regions][]"
                                            value="<?php echo esc_attr($slug); ?>"
                                            <?php checked(in_array($slug, $selected_regions, true)); ?> />
                                     <?php echo esc_html($label); ?>
@@ -427,7 +427,7 @@ function cacheboost_render_settings_page(): void {
     </div>
 
     <?php
-    $logs = \CacheBoost\Logger::get_logs();
+    $logs = \CacheBoostWarmer\Logger::get_logs();
     $channel_colors = ['buffer' => '#0073aa', 'api' => '#46b450', 'settings' => '#826eb4'];
     ?>
     <hr style="margin-top:24px">
@@ -476,6 +476,6 @@ function cacheboost_render_settings_page(): void {
         <?php endif; ?>
     </details>
 
-    <?php cacheboost_render_last_flush(); ?>
+    <?php cbwarmer_render_last_flush(); ?>
     <?php
 }

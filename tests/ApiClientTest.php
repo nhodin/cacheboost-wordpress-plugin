@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CacheBoost\Tests;
+namespace CacheBoostWarmer\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use CacheBoost\ApiClient;
+use CacheBoostWarmer\ApiClient;
 use PHPUnit\Framework\TestCase;
 
 class ApiClientTest extends TestCase

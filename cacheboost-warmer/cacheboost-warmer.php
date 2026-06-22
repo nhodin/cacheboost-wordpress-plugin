@@ -3,7 +3,7 @@
  * Plugin Name: CacheBoost Warmer
  * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      CacheBoost
@@ -15,49 +15,49 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CACHEBOOST_VERSION', '1.0.0');
-define('CACHEBOOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('CBWARMER_VERSION', '1.0.1');
+define('CBWARMER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-logger.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-config.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-api-client.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-event-buffer.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-hooks-native.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-hooks-cache-plugins.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'admin/menu.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'admin/settings-page.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'admin/history-page.php';
-require_once CACHEBOOST_PLUGIN_DIR . 'admin/dashboard-widget.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-logger.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-config.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-api-client.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-event-buffer.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-native.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-cache-plugins.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
+require_once CBWARMER_PLUGIN_DIR . 'admin/menu.php';
+require_once CBWARMER_PLUGIN_DIR . 'admin/settings-page.php';
+require_once CBWARMER_PLUGIN_DIR . 'admin/history-page.php';
+require_once CBWARMER_PLUGIN_DIR . 'admin/dashboard-widget.php';
 
 register_activation_hook(__FILE__, function () {
-    if (!get_option('cacheboost_notice_dismissed')) {
-        update_option('cacheboost_notice_dismissed', '0');
+    if (!get_option('cbwarmer_notice_dismissed')) {
+        update_option('cbwarmer_notice_dismissed', '0');
     }
 });
 
 add_action('admin_notices', function () {
     if (!current_user_can('manage_options')) return;
-    if (get_option('cacheboost_notice_dismissed') === '1') return;
-    $options = get_option('cacheboost_options', []);
+    if (get_option('cbwarmer_notice_dismissed') === '1') return;
+    $options = get_option('cbwarmer_options', []);
     if (!empty($options['api_key'])) return;
 
-    $settings_url = admin_url('admin.php?page=cacheboost');
+    $settings_url = admin_url('admin.php?page=cbwarmer');
     $message = sprintf(
         /* translators: %s: link to CacheBoost settings page */
         __('CacheBoost Warmer is installed. <a href="%s">Configure your API key</a> to start warming your cache.', 'cacheboost-warmer'),
         esc_url($settings_url)
     );
     printf(
-        '<div class="notice notice-info is-dismissible" id="cacheboost-setup-notice"><p>%s</p></div>',
+        '<div class="notice notice-info is-dismissible" id="cbwarmer-setup-notice"><p>%s</p></div>',
         wp_kses($message, ['a' => ['href' => []]])
     );
 });
 
-add_action('wp_ajax_cacheboost_dismiss_notice', function () {
-    check_ajax_referer('cacheboost_dismiss_notice', 'nonce');
+add_action('wp_ajax_cbwarmer_dismiss_notice', function () {
+    check_ajax_referer('cbwarmer_dismiss_notice', 'nonce');
     if (current_user_can('manage_options')) {
-        update_option('cacheboost_notice_dismissed', '1');
+        update_option('cbwarmer_notice_dismissed', '1');
     }
     wp_die();
 });
@@ -65,7 +65,7 @@ add_action('wp_ajax_cacheboost_dismiss_notice', function () {
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function (array $links): array {
     $settings_link = sprintf(
         '<a href="%s">%s</a>',
-        esc_url(admin_url('admin.php?page=cacheboost')),
+        esc_url(admin_url('admin.php?page=cbwarmer')),
         __('Settings', 'cacheboost-warmer')
     );
     array_unshift($links, $settings_link);
@@ -74,40 +74,40 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function (array $
 
 add_action('admin_enqueue_scripts', function () {
     if (!current_user_can('manage_options')) return;
-    if (get_option('cacheboost_notice_dismissed') === '1') return;
-    $options = get_option('cacheboost_options', []);
+    if (get_option('cbwarmer_notice_dismissed') === '1') return;
+    $options = get_option('cbwarmer_options', []);
     if (!empty($options['api_key'])) return;
 
     wp_enqueue_script(
-        'cacheboost-notice',
+        'cbwarmer-notice',
         plugins_url('admin/js/notice-dismiss.js', __FILE__),
         ['jquery'],
-        CACHEBOOST_VERSION,
+        CBWARMER_VERSION,
         true
     );
-    wp_localize_script('cacheboost-notice', 'CacheBoostNotice', [
-        'nonce' => wp_create_nonce('cacheboost_dismiss_notice'),
+    wp_localize_script('cbwarmer-notice', 'CacheBoostWarmerNotice', [
+        'nonce' => wp_create_nonce('cbwarmer_dismiss_notice'),
     ]);
 });
 
 add_action('init', function () {
-    $config = new CacheBoost\Config();
-    $buffer = new CacheBoost\EventBuffer();
-    (new CacheBoost\HooksNative($buffer, $config))->register();
-    (new CacheBoost\HooksCachePlugins($buffer, $config))->register();
+    $config = new CacheBoostWarmer\Config();
+    $buffer = new CacheBoostWarmer\EventBuffer();
+    (new CacheBoostWarmer\HooksNative($buffer, $config))->register();
+    (new CacheBoostWarmer\HooksCachePlugins($buffer, $config))->register();
     if (class_exists('WooCommerce')) {
-        (new CacheBoost\HooksWooCommerce($buffer))->register();
+        (new CacheBoostWarmer\HooksWooCommerce($buffer))->register();
     }
 });
 
-function cacheboost_render_admin_header(string $title): void {
+function cbwarmer_render_admin_header(string $title): void {
     ?>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 14px;border-bottom:1px solid #dcdcde;margin-bottom:20px;">
         <div style="display:flex;align-items:center;gap:10px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="24" height="24" aria-hidden="true"><path fill="#14532d" d="m80 14 5 12H75z"/><path fill="#166534" d="m70 26 10 13 10-13v8L80 47 70 34Z"/><path fill="#15803d" d="m64 47 16 14 16-14v9L80 70 64 56Z"/><path fill="#16a34a" d="m57 70 23 15 23-15v9L80 94 57 79Z"/><path fill="#22c55e" d="m50 94 30 16 30-16v9l-30 16-30-16Z"/><path fill="#4ade80" d="m44 119 36 17 36-17-1 9-35 17-35-17Z"/><path stroke="#22c55e" stroke-linecap="round" stroke-width="3.5" d="M80 145v9"/></svg>
             <span style="font-size:18px;font-weight:600;color:#1d2327"><?php echo esc_html($title); ?></span>
             <span style="font-size:11px;color:#646970;background:#f6f7f7;border:1px solid #dcdcde;padding:1px 8px;border-radius:10px">
-                v<?php echo esc_html(CACHEBOOST_VERSION); ?>
+                v<?php echo esc_html(CBWARMER_VERSION); ?>
             </span>
         </div>
         <nav style="display:flex;align-items:center;gap:4px;font-size:13px;">
@@ -130,8 +130,8 @@ function cacheboost_render_admin_header(string $title): void {
     <?php
 }
 
-function cacheboost_render_last_flush(): void {
-    $flush = get_option('cacheboost_last_flush');
+function cbwarmer_render_last_flush(): void {
+    $flush = get_option('cbwarmer_last_flush');
     ?>
     <div style="margin-top:32px;border-top:1px solid #dcdcde;padding-top:16px;">
         <h3 style="font-size:13px;font-weight:600;color:#1d2327;margin:0 0 10px">

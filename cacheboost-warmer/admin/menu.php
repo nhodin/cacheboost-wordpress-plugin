@@ -9,27 +9,27 @@ add_action('admin_menu', function () {
         'CacheBoost',
         'CacheBoost',
         'manage_options',
-        'cacheboost',
-        'cacheboost_render_settings_page',
+        'cbwarmer',
+        'cbwarmer_render_settings_page',
         $icon,
         80
     );
 
     add_submenu_page(
-        'cacheboost',
+        'cbwarmer',
         __('CacheBoost — Settings', 'cacheboost-warmer'),
         __('Settings', 'cacheboost-warmer'),
         'manage_options',
-        'cacheboost',
-        'cacheboost_render_settings_page'
+        'cbwarmer',
+        'cbwarmer_render_settings_page'
     );
 
     add_submenu_page(
-        'cacheboost',
+        'cbwarmer',
         __('CacheBoost — History', 'cacheboost-warmer'),
         __('History', 'cacheboost-warmer'),
         'manage_options',
-        'cacheboost-history',
-        'cacheboost_render_history_page'
+        'cbwarmer-history',
+        'cbwarmer_render_history_page'
     );
 });

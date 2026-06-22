@@ -3,14 +3,14 @@
 
     var boostSelect = document.getElementById('cb_boost_id');
     var noBoostEl   = document.getElementById('cb-no-boost-msg');
-    var savedBoostId = CacheBoostSettings.savedBoostId;
+    var savedBoostId = CacheBoostWarmerSettings.savedBoostId;
     var boostI18n = {
-        loading:     CacheBoostSettings.i18n.loading,
-        noApiKey:    CacheBoostSettings.i18n.noApiKey,
-        noSiteId:    CacheBoostSettings.i18n.noSiteId,
-        loadFailed:  CacheBoostSettings.i18n.loadFailed,
-        noBoosts:    CacheBoostSettings.i18n.noBoosts,
-        stale:       CacheBoostSettings.i18n.stale,
+        loading:     CacheBoostWarmerSettings.i18n.loading,
+        noApiKey:    CacheBoostWarmerSettings.i18n.noApiKey,
+        noSiteId:    CacheBoostWarmerSettings.i18n.noSiteId,
+        loadFailed:  CacheBoostWarmerSettings.i18n.loadFailed,
+        noBoosts:    CacheBoostWarmerSettings.i18n.noBoosts,
+        stale:       CacheBoostWarmerSettings.i18n.stale,
     };
 
     function loadBoosts() {
@@ -19,10 +19,10 @@
         noBoostEl.style.display = 'none';
 
         var fd = new FormData();
-        fd.append('action', 'cacheboost_fetch_boosts');
-        fd.append('nonce',  CacheBoostSettings.nonce);
+        fd.append('action', 'cbwarmer_fetch_boosts');
+        fd.append('nonce',  CacheBoostWarmerSettings.nonce);
 
-        fetch(CacheBoostSettings.ajaxUrl, {
+        fetch(CacheBoostWarmerSettings.ajaxUrl, {
             method: 'POST', body: fd, credentials: 'same-origin',
         })
         .then(function (r) { return r.json(); })
@@ -81,14 +81,14 @@
 
     btn.addEventListener('click', function () {
         btn.disabled     = true;
-        result.textContent = CacheBoostSettings.i18n.testing;
+        result.textContent = CacheBoostWarmerSettings.i18n.testing;
         result.style.color = '';
 
         var data = new FormData();
-        data.append('action', 'cacheboost_test_connection');
-        data.append('nonce',  CacheBoostSettings.nonce);
+        data.append('action', 'cbwarmer_test_connection');
+        data.append('nonce',  CacheBoostWarmerSettings.nonce);
 
-        fetch(CacheBoostSettings.ajaxUrl, {
+        fetch(CacheBoostWarmerSettings.ajaxUrl, {
             method: 'POST',
             body: data,
             credentials: 'same-origin',
@@ -107,7 +107,7 @@
             }
         })
         .catch(function () {
-            result.textContent = CacheBoostSettings.i18n.requestFailed;
+            result.textContent = CacheBoostWarmerSettings.i18n.requestFailed;
             result.style.color = '#cc0000';
         })
         .finally(function () {
@@ -120,9 +120,9 @@
         clearBtn.addEventListener('click', function () {
             clearBtn.disabled = true;
             var data = new FormData();
-            data.append('action', 'cacheboost_clear_logs');
-            data.append('nonce',  CacheBoostSettings.clearLogsNonce);
-            fetch(CacheBoostSettings.ajaxUrl, {
+            data.append('action', 'cbwarmer_clear_logs');
+            data.append('nonce',  CacheBoostWarmerSettings.clearLogsNonce);
+            fetch(CacheBoostWarmerSettings.ajaxUrl, {
                 method: 'POST',
                 body: data,
                 credentials: 'same-origin',
@@ -132,7 +132,7 @@
                 var acc = document.getElementById('cb-logs-accordion');
                 var p = document.createElement('p');
                 p.className = 'description';
-                p.textContent = CacheBoostSettings.i18n.noActivity;
+                p.textContent = CacheBoostWarmerSettings.i18n.noActivity;
                 acc.appendChild(p);
             });
         });
@@ -145,10 +145,10 @@
     }
 
     function cbRenderRegions(available) {
-        var labels = CacheBoostSettings.regionLabels;
+        var labels = CacheBoostWarmerSettings.regionLabels;
         // Read the current checked state from the live form (not the PHP-baked saved state)
-        var currentChecked = Array.from(document.querySelectorAll('input[name="cacheboost_options[regions][]"]:checked')).map(function(el) { return el.value; });
-        var saved = CacheBoostSettings.selectedRegions;
+        var currentChecked = Array.from(document.querySelectorAll('input[name="cbwarmer_options[regions][]"]:checked')).map(function(el) { return el.value; });
+        var saved = CacheBoostWarmerSettings.selectedRegions;
         var selected = currentChecked.length > 0 ? currentChecked : saved;
         var td = document.querySelector('#cb-regions-row td');
         var html = '<fieldset>';
@@ -156,12 +156,12 @@
             var label = labels[slug] || slug.toUpperCase();
             var checked = selected.indexOf(slug) !== -1 ? ' checked' : '';
             html += '<label style="margin-right:16px">'
-                  + '<input type="checkbox" name="cacheboost_options[regions][]" value="' + cbEsc(slug) + '"' + checked + '> '
+                  + '<input type="checkbox" name="cbwarmer_options[regions][]" value="' + cbEsc(slug) + '"' + checked + '> '
                   + cbEsc(label) + '</label>';
         });
         html += '</fieldset>';
         html += '<p class="description">'
-              + CacheBoostSettings.i18n.regionsHelp
+              + CacheBoostWarmerSettings.i18n.regionsHelp
               + '</p>';
         td.innerHTML = html;
     }

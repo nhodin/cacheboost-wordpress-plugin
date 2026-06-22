@@ -3,20 +3,20 @@ if (!defined('ABSPATH')) exit;
 
 add_action('wp_dashboard_setup', function () {
     if (!current_user_can('manage_options')) return;
-    if (!(new \CacheBoost\Config())->is_dashboard_widget_enabled()) return;
+    if (!(new \CacheBoostWarmer\Config())->is_dashboard_widget_enabled()) return;
     wp_add_dashboard_widget(
-        'cacheboost_dashboard_widget',
+        'cbwarmer_dashboard_widget',
         __('CacheBoost — Last Warming Run', 'cacheboost-warmer'),
-        'cacheboost_render_dashboard_widget'
+        'cbwarmer_render_dashboard_widget'
     );
 });
 
-function cacheboost_render_dashboard_widget(): void {
-    if (!\CacheBoost\ApiClient::can_notify()) {
+function cbwarmer_render_dashboard_widget(): void {
+    if (!\CacheBoostWarmer\ApiClient::can_notify()) {
         printf(
             '<p style="color:#646970">%s <a href="%s">%s</a></p>',
             esc_html__('Configure your API key to see warming stats.', 'cacheboost-warmer'),
-            esc_url(admin_url('admin.php?page=cacheboost')),
+            esc_url(admin_url('admin.php?page=cbwarmer')),
             esc_html__('Go to settings →', 'cacheboost-warmer')
         );
         return;
@@ -24,22 +24,22 @@ function cacheboost_render_dashboard_widget(): void {
 
     // Blocking API calls are cached so the wp-admin dashboard never waits on
     // the API more than once per interval.
-    $data = get_transient('cacheboost_widget_data');
+    $data = get_transient('cbwarmer_widget_data');
     if (!is_array($data)) {
-        $result = \CacheBoost\ApiClient::get_runs();
+        $result = \CacheBoostWarmer\ApiClient::get_runs();
         $latest = (!empty($result['success']) && !empty($result['runs'])) ? $result['runs'][0] : null;
 
         // Fetch rich stats only for completed runs
         $stats = null;
         if ($latest && ($latest['status'] ?? '') === 'done' && (int) ($latest['id'] ?? 0) > 0) {
-            $detail = \CacheBoost\ApiClient::get_run((int) $latest['id']);
+            $detail = \CacheBoostWarmer\ApiClient::get_run((int) $latest['id']);
             if ($detail['success']) {
                 $stats = $detail['run']['stats'] ?? null;
             }
         }
 
         $data = ['latest' => $latest, 'stats' => $stats];
-        set_transient('cacheboost_widget_data', $data, 2 * MINUTE_IN_SECONDS);
+        set_transient('cbwarmer_widget_data', $data, 2 * MINUTE_IN_SECONDS);
     }
 
     if (empty($data['latest'])) {
@@ -158,7 +158,7 @@ function cacheboost_render_dashboard_widget(): void {
         <?php endif; ?>
 
         <div style="border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
-            <a href="<?php echo esc_url(admin_url('admin.php?page=cacheboost-history')); ?>" style="font-size:12px;color:#2271b1;text-decoration:none">
+            <a href="<?php echo esc_url(admin_url('admin.php?page=cbwarmer-history')); ?>" style="font-size:12px;color:#2271b1;text-decoration:none">
                 <?php esc_html_e('Full history →', 'cacheboost-warmer'); ?>
             </a>
             <?php if ($run_id): ?>

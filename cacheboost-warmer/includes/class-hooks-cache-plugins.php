@@ -1,5 +1,5 @@
 <?php
-namespace CacheBoost;
+namespace CacheBoostWarmer;
 
 if (!defined('ABSPATH')) exit;
 

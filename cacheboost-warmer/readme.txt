@@ -4,7 +4,7 @@ Tags: cache, cache warming, performance, WooCommerce, WP Rocket
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: MIT
 
 Notifies the CacheBoost API after cache purge events to trigger targeted or full cache warming.

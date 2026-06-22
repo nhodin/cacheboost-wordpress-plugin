@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace CacheBoost\Tests;
+namespace CacheBoostWarmer\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use CacheBoost\Config;
+use CacheBoostWarmer\Config;
 use PHPUnit\Framework\TestCase;
 
 class ConfigTest extends TestCase
@@ -27,7 +27,7 @@ class ConfigTest extends TestCase
     {
         Functions\expect('get_option')
             ->once()
-            ->with('cacheboost_options', [])
+            ->with('cbwarmer_options', [])
             ->andReturn($options);
 
         return new Config();

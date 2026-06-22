@@ -1,13 +1,13 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-function cacheboost_render_history_page(): void {
+function cbwarmer_render_history_page(): void {
     if (!current_user_can('manage_options')) return;
 
-    $options = get_option('cacheboost_options', []);
+    $options = get_option('cbwarmer_options', []);
     $api_key = $options['api_key'] ?? '';
 
-    if (!\CacheBoost\ApiClient::is_valid_api_key($api_key)) {
+    if (!\CacheBoostWarmer\ApiClient::is_valid_api_key($api_key)) {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('CacheBoost — Run History', 'cacheboost-warmer'); ?></h1>
@@ -16,7 +16,7 @@ function cacheboost_render_history_page(): void {
                     sprintf(
                         /* translators: %s: link to settings page */
                         __('Please <a href="%s">configure your API key</a> first.', 'cacheboost-warmer'),
-                        esc_url(admin_url('admin.php?page=cacheboost'))
+                        esc_url(admin_url('admin.php?page=cbwarmer'))
                     ),
                     ['a' => ['href' => []]]
                 ); ?>
@@ -26,7 +26,7 @@ function cacheboost_render_history_page(): void {
         return;
     }
 
-    $result = \CacheBoost\ApiClient::get_runs();
+    $result = \CacheBoostWarmer\ApiClient::get_runs();
     $runs   = $result['success'] ? ($result['runs'] ?? []) : [];
     $error  = $result['success'] ? null : ($result['message'] ?? '');
 
@@ -42,7 +42,7 @@ function cacheboost_render_history_page(): void {
     ];
     ?>
     <div class="wrap">
-        <?php cacheboost_render_admin_header(__('CacheBoost — Run History', 'cacheboost-warmer')); ?>
+        <?php cbwarmer_render_admin_header(__('CacheBoost — Run History', 'cacheboost-warmer')); ?>
         <div style="margin-bottom:16px;">
             <a href="<?php echo esc_url(add_query_arg([])); ?>" class="button button-secondary">
                 ↻ <?php esc_html_e('Refresh', 'cacheboost-warmer'); ?>
@@ -119,7 +119,7 @@ function cacheboost_render_history_page(): void {
             </a>
         </p>
 
-        <?php cacheboost_render_last_flush(); ?>
+        <?php cbwarmer_render_last_flush(); ?>
     </div>
     <?php
 }
