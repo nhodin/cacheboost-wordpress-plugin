@@ -3,7 +3,7 @@
  * Plugin Name: CacheBoost Warmer
  * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      CacheBoost
@@ -15,7 +15,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CBWARMER_VERSION', '1.0.1');
+define('CBWARMER_VERSION', '1.0.2');
 define('CBWARMER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-logger.php';
@@ -25,6 +25,7 @@ require_once CBWARMER_PLUGIN_DIR . 'includes/class-event-buffer.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-native.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-cache-plugins.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-site-validation.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/menu.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/settings-page.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/history-page.php';
@@ -89,6 +90,8 @@ add_action('admin_enqueue_scripts', function () {
         'nonce' => wp_create_nonce('cbwarmer_dismiss_notice'),
     ]);
 });
+
+add_action('init', [CacheBoostWarmer\SiteValidation::class, 'maybe_serve_token_file'], 0);
 
 add_action('init', function () {
     $config = new CacheBoostWarmer\Config();

@@ -16,3 +16,4 @@ require_once $includes . '/class-event-buffer.php';
 require_once $includes . '/class-hooks-native.php';
 require_once $includes . '/class-hooks-cache-plugins.php';
 require_once $includes . '/class-hooks-woocommerce.php';
+require_once $includes . '/class-site-validation.php';

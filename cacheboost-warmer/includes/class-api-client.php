@@ -160,6 +160,66 @@ class ApiClient {
     }
 
     /**
+     * Reads the site's ownership validation token. Blocking — for admin AJAX only.
+     */
+    public static function get_validation_token(string $api_key, int $site_id): ?string {
+        $resp = wp_remote_get(rtrim((new Config())->get_api_endpoint(), '/') . "/v1/sites/{$site_id}", [
+            'timeout' => 10,
+            'headers' => ['Authorization' => 'Bearer ' . $api_key],
+        ]);
+
+        if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) {
+            Logger::log('api', sprintf('GET /v1/sites/%d failed', $site_id), 'error');
+            return null;
+        }
+
+        $site  = json_decode(wp_remote_retrieve_body($resp), true);
+        $token = is_array($site) ? ($site['validation_token'] ?? '') : '';
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    /**
+     * Asks CacheBoost to check domain ownership. Blocking — for admin AJAX only.
+     *
+     * @return array{success: bool, message?: string}
+     */
+    public static function validate_site(string $api_key, int $site_id): array {
+        Logger::log('api', sprintf('POST /v1/sites/%d/validate', $site_id));
+
+        $resp = wp_remote_post(rtrim((new Config())->get_api_endpoint(), '/') . "/v1/sites/{$site_id}/validate", [
+            // The API tries https and http, file then meta tag, 10 s each.
+            'timeout' => 45,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => '{}',
+        ]);
+
+        if (is_wp_error($resp)) {
+            Logger::log('api', 'POST /v1/.../validate failed: ' . $resp->get_error_message(), 'error');
+            return ['success' => false, 'message' => $resp->get_error_message()];
+        }
+
+        $code = wp_remote_retrieve_response_code($resp);
+        $body = json_decode(wp_remote_retrieve_body($resp), true);
+
+        if ($code === 200 && !empty($body['validated'])) {
+            Logger::log('api', sprintf('POST /v1/sites/%d/validate OK', $site_id));
+            return ['success' => true];
+        }
+
+        Logger::log('api', sprintf('POST /v1/sites/%d/validate failed: HTTP %d', $site_id, $code), 'error');
+
+        if ($code === 403) {
+            return ['success' => false, 'message' => __('Your API key needs the sites:write scope to validate the domain automatically.', 'cacheboost-warmer')];
+        }
+
+        $detail = is_array($body) && isset($body['error']) ? (string) $body['error'] : sprintf('HTTP %d', $code);
+        return ['success' => false, 'message' => $detail];
+    }
+
+    /**
      * Blocking connectivity check used by the admin test button.
      *
      * Calls GET /v1/me (scopes) then GET /v1/sites (accessible sites with validation status).

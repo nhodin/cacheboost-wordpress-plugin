@@ -4,7 +4,7 @@ Tags: cache, cache warming, performance, WooCommerce, WP Rocket
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: MIT
 
 Notifies the CacheBoost API after cache purge events to trigger targeted or full cache warming.
@@ -46,7 +46,7 @@ Go to the **CacheBoost** menu:
 * **API Key** — paste your `cb_live_...` key.
 * **Warming triggers** — Smart (targeted URLs) and/or Full (entire site), each can be toggled independently.
 * **Stock Warming** — (WooCommerce only) warm product pages after stock changes.
-* **Test Connection** — validate your API key without leaving the admin.
+* **Test Connection** — validate your API key without leaving the admin. If your domain is not yet validated in CacheBoost, the plugin validates it automatically (requires the `sites:write` scope).
 
 == Cache plugin support ==
 
@@ -76,6 +76,9 @@ Yes, but do not network-activate. Each sub-site should have its own settings and
 Only the site URL, the list of page URLs to warm (Smart mode), and a timestamp. No personal user data is ever transmitted.
 
 == Changelog ==
+
+= 1.0.2 =
+* Test Connection now validates domain ownership automatically, without uploading a file or editing the theme. Requires the `sites:write` API scope.
 
 = 1.0.0 =
 * Initial release.

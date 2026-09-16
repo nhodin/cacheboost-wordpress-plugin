@@ -121,11 +121,15 @@ function cbwarmer_ajax_test_connection(): void {
         }
 
         if (empty($matched['validated'])) {
-            wp_send_json_error(['message' => sprintf(
-                /* translators: %s: current site domain */
-                __('Connected, but %s is not yet validated. Please complete domain validation in your CacheBoost account.', 'cacheboost-warmer'),
-                $home_domain
-            )]);
+            $validation = \CacheBoostWarmer\SiteValidation::validate($api_key, (int) ($matched['id'] ?? 0));
+            if (!$validation['success']) {
+                wp_send_json_error(['message' => sprintf(
+                    /* translators: 1: current site domain, 2: error detail */
+                    __('Connected, but %1$s could not be validated automatically (%2$s). Please complete domain validation in your CacheBoost account.', 'cacheboost-warmer'),
+                    $home_domain,
+                    $validation['message'] ?? ''
+                )]);
+            }
         }
 
         // Persist site_id and available regions so send() and the form work without re-testing
