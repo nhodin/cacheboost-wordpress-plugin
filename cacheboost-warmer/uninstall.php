@@ -7,6 +7,7 @@ $cbwarmer_options = [
     'cbwarmer_notice_dismissed',
     'cbwarmer_last_flush',
     'cbwarmer_validation_token',
+    'cbwarmer_site_validated',
 ];
 
 $cbwarmer_transients = [

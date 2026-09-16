@@ -15,6 +15,31 @@ class SiteValidation {
 
     const OPTION = 'cbwarmer_validation_token';
 
+    /** '1' validated, '0' validation failed (warn the user), absent = unknown. */
+    const STATUS_OPTION = 'cbwarmer_site_validated';
+
+    /**
+     * Validates the matched site if needed and records the outcome for the settings page warning.
+     *
+     * @param array<string,mixed> $site Entry from GET /v1/sites.
+     * @return array{success: bool, attempted: bool, message?: string}
+     */
+    public static function ensure(string $api_key, array $site): array {
+        if (!empty($site['validated'])) {
+            update_option(self::STATUS_OPTION, '1');
+            return ['success' => true, 'attempted' => false];
+        }
+
+        $result = self::validate($api_key, (int) ($site['id'] ?? 0));
+        update_option(self::STATUS_OPTION, $result['success'] ? '1' : '0');
+        return $result + ['attempted' => true];
+    }
+
+    /** True when an API key is set but the domain could not be validated. */
+    public static function is_pending(): bool {
+        return get_option(self::STATUS_OPTION) === '0';
+    }
+
     /**
      * Blocking — for admin AJAX only.
      *

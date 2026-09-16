@@ -120,16 +120,14 @@ function cbwarmer_ajax_test_connection(): void {
             )]);
         }
 
-        if (empty($matched['validated'])) {
-            $validation = \CacheBoostWarmer\SiteValidation::validate($api_key, (int) ($matched['id'] ?? 0));
-            if (!$validation['success']) {
-                wp_send_json_error(['message' => sprintf(
-                    /* translators: 1: current site domain, 2: error detail */
-                    __('Connected, but %1$s could not be validated automatically (%2$s). Please complete domain validation in your CacheBoost account.', 'cacheboost-warmer'),
-                    $home_domain,
-                    $validation['message'] ?? ''
-                )]);
-            }
+        $validation = \CacheBoostWarmer\SiteValidation::ensure($api_key, $matched);
+        if (!$validation['success']) {
+            wp_send_json_error(['message' => sprintf(
+                /* translators: 1: current site domain, 2: error detail */
+                __('Connected, but %1$s could not be validated automatically (%2$s). Please complete domain validation in your CacheBoost account.', 'cacheboost-warmer'),
+                $home_domain,
+                $validation['message'] ?? ''
+            )]);
         }
 
         // Persist site_id and available regions so send() and the form work without re-testing
@@ -214,6 +212,11 @@ function cbwarmer_sanitize_options(array $input): array {
     $current    = get_option('cbwarmer_options', []);
     $key_changed = ($old['api_key'] ?? '') !== ($output['api_key'] ?? '');
 
+    if ($key_changed) {
+        // Validation status belonged to the previous key/site.
+        delete_option(\CacheBoostWarmer\SiteValidation::STATUS_OPTION);
+    }
+
     if ($key_changed && !empty($output['api_key'])) {
         // Resolve site_id and regions immediately so send() works without clicking "Test Connection"
         $ping = \CacheBoostWarmer\ApiClient::ping($output['api_key'], $output['api_endpoint']);
@@ -228,6 +231,19 @@ function cbwarmer_sanitize_options(array $input): array {
             }
             $output['available_regions'] = $ping['regions'] ?? [];
             $output['site_id']           = $matched_site['id'] ?? null;
+
+            // Without validation every warm request is rejected (409) silently, so validate now.
+            if ($matched_site !== null) {
+                $validation = \CacheBoostWarmer\SiteValidation::ensure($output['api_key'], $matched_site);
+                if ($validation['attempted'] && $validation['success']) {
+                    add_settings_error(
+                        'cbwarmer_options',
+                        'site_validated',
+                        __('Your domain has been validated in CacheBoost.', 'cacheboost-warmer'),
+                        'success'
+                    );
+                }
+            }
         }
     } else {
         // Preserve values written by the AJAX test (or a previous save)
@@ -276,6 +292,20 @@ function cbwarmer_render_settings_page(): void {
     <div class="wrap">
         <?php cbwarmer_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>
         <?php settings_errors('cbwarmer_options'); ?>
+
+        <?php if (!empty($options['api_key']) && \CacheBoostWarmer\SiteValidation::is_pending()): ?>
+            <div class="notice notice-warning inline">
+                <p>
+                    <strong><?php esc_html_e('Your domain is not validated in CacheBoost.', 'cacheboost-warmer'); ?></strong>
+                    <?php esc_html_e('Cache warming requests will be rejected until it is. Automatic validation failed: see the activity log for details.', 'cacheboost-warmer'); ?>
+                </p>
+                <p>
+                    <a href="https://app.cache-boost.com/sites" target="_blank" rel="noopener" class="button">
+                        <?php esc_html_e('See validation methods', 'cacheboost-warmer'); ?>
+                    </a>
+                </p>
+            </div>
+        <?php endif; ?>
 
         <form method="post" action="options.php">
             <?php settings_fields('cbwarmer_settings'); ?>

@@ -78,7 +78,8 @@ Only the site URL, the list of page URLs to warm (Smart mode), and a timestamp. 
 == Changelog ==
 
 = 1.0.2 =
-* Test Connection now validates domain ownership automatically, without uploading a file or editing the theme. Requires the `sites:write` API scope.
+* Domain ownership is now validated automatically when saving a new API key or clicking Test Connection, without uploading a file or editing the theme. Requires the `sites:write` API scope.
+* Settings page warns when the domain is not validated, with a link to the manual validation methods.
 
 = 1.0.0 =
 * Initial release.
