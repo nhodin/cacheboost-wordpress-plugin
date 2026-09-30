@@ -12,6 +12,29 @@ add_action('wp_ajax_cbwarmer_fetch_boosts',   'cbwarmer_ajax_fetch_boosts');
 
 add_action('admin_enqueue_scripts', 'cbwarmer_enqueue_settings_assets');
 
+/**
+ * Labels for the region codes returned by GET /v1/me (ISO 3166-1 alpha-2).
+ * A code missing here is shown upper-cased, so a new CacheBoost region still appears.
+ * 'uk' is the legacy code of 'gb', kept for region lists cached before 1.0.3.
+ */
+function cbwarmer_region_labels(): array {
+    return [
+        'fr' => 'France',
+        'de' => 'Germany',
+        'gb' => 'United Kingdom',
+        'uk' => 'United Kingdom',
+        'us' => 'United States',
+        'es' => 'Spain',
+        'it' => 'Italy',
+        'ch' => 'Switzerland',
+        'sg' => 'Singapore',
+        'in' => 'India',
+        'au' => 'Australia',
+        'br' => 'Brazil',
+        'ca' => 'Canada',
+    ];
+}
+
 function cbwarmer_enqueue_settings_assets(string $hook): void {
     if ($hook !== 'toplevel_page_cbwarmer') return;
 
@@ -34,7 +57,7 @@ function cbwarmer_enqueue_settings_assets(string $hook): void {
         'nonce'           => wp_create_nonce('cbwarmer_test_nonce'),
         'clearLogsNonce'  => wp_create_nonce('cbwarmer_clear_logs_nonce'),
         'savedBoostId'    => (string) ($options['boost_id'] ?? ''),
-        'regionLabels'    => ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'],
+        'regionLabels'    => cbwarmer_region_labels(),
         'selectedRegions' => $selected_regions,
         'i18n'            => [
             'loading'       => __('Loading…', 'cacheboost-warmer'),
@@ -287,7 +310,7 @@ function cbwarmer_render_settings_page(): void {
         $selected_regions = ['us'];
     }
 
-    $region_labels = ['fr' => 'France', 'us' => 'USA', 'eu' => 'Europe', 'as' => 'Asia'];
+    $region_labels = cbwarmer_region_labels();
     ?>
     <div class="wrap">
         <?php cbwarmer_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>

@@ -3,7 +3,7 @@
  * Plugin Name: CacheBoost Warmer
  * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
- * Version:     1.0.2
+ * Version:     1.0.3
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      CacheBoost
@@ -15,7 +15,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CBWARMER_VERSION', '1.0.2');
+define('CBWARMER_VERSION', '1.0.3');
 define('CBWARMER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-logger.php';

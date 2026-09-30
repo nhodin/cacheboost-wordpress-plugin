@@ -4,7 +4,7 @@ Tags: cache, cache warming, performance, woocommerce, page speed, GEO, SEO
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -92,6 +92,9 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.0.3 =
+* Region labels follow the CacheBoost catalogue (ISO country codes: France, Germany, United Kingdom, United States, Spain, Italy…). Click Test Connection to refresh the list of available regions.
 
 = 1.0.2 =
 * Domain ownership is now validated automatically when saving a new API key or clicking Test Connection, without uploading a file or editing the theme. Requires the `sites:write` API scope.
