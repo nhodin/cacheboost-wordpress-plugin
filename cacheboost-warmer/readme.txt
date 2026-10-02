@@ -4,7 +4,7 @@ Tags: cache, preload, cache warming, woocommerce, performance
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.1.1 =
+* Warns in the WordPress admin when the CacheBoost account email must be verified, and when warming is paused because it was not.
 
 = 1.1.0 =
 * New **Connect to CacheBoost** button: sign in or sign up, authorize, done. No more copying an API key, adding the domain or creating a Boost by hand.

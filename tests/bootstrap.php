@@ -18,3 +18,4 @@ require_once $includes . '/class-hooks-cache-plugins.php';
 require_once $includes . '/class-hooks-woocommerce.php';
 require_once $includes . '/class-site-validation.php';
 require_once $includes . '/class-connect.php';
+require_once $includes . '/class-account-status.php';

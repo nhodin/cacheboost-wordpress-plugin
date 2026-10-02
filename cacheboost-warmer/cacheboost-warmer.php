@@ -3,7 +3,7 @@
  * Plugin Name: CacheBoost Warmer
  * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
- * Version:     1.1.0
+ * Version:     1.1.1
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      CacheBoost
@@ -15,7 +15,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CBWARMER_VERSION', '1.1.0');
+define('CBWARMER_VERSION', '1.1.1');
 define('CBWARMER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-logger.php';
@@ -27,6 +27,7 @@ require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-cache-plugins.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-site-validation.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-connect.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-account-status.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/menu.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/settings-page.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/history-page.php';
@@ -54,6 +55,39 @@ add_action('admin_notices', function () {
         '<div class="notice notice-info is-dismissible" id="cbwarmer-setup-notice"><p>%s</p></div>',
         wp_kses($message, ['a' => ['href' => []]])
     );
+});
+
+// Email verification of accounts created with "Connect to CacheBoost": warn before, and once, warming stops.
+add_action('admin_notices', function () {
+    if (!current_user_can('manage_options')) return;
+    $api_key = (new \CacheBoostWarmer\Config())->get_api_key();
+    if ($api_key === '') return;
+
+    // Only the dashboard and the plugin screens may call the API; other screens reuse the cached state.
+    $screen      = function_exists('get_current_screen') ? get_current_screen() : null;
+    $own_screens = $screen && ($screen->id === 'dashboard' || str_contains($screen->id, 'cbwarmer'));
+    $status      = $own_screens
+        ? \CacheBoostWarmer\AccountStatus::get($api_key)
+        : get_transient(\CacheBoostWarmer\AccountStatus::TRANSIENT);
+    if (!is_array($status)) return;
+
+    $allowed = ['a' => ['href' => [], 'target' => [], 'rel' => []]];
+    if ($status['state'] === 'blocked') {
+        $message = sprintf(
+            /* translators: %s: CacheBoost login URL */
+            __('<strong>CacheBoost: cache warming is paused</strong> because your email address is not verified. Click the link we emailed you, or <a href="%s" target="_blank" rel="noopener">log in to CacheBoost</a> to get a new one.', 'cacheboost-warmer'),
+            esc_url('https://app.cache-boost.com/login')
+        );
+        printf('<div class="notice notice-error"><p>%s</p></div>', wp_kses($message, $allowed + ['strong' => []]));
+    } elseif ($status['state'] === 'pending' && $own_screens) {
+        $message = sprintf(
+            /* translators: 1: deadline date, 2: CacheBoost app URL */
+            __('CacheBoost: verify your email address before %1$s, or cache warming will stop. Click the link we emailed you, or <a href="%2$s" target="_blank" rel="noopener">resend it</a>.', 'cacheboost-warmer'),
+            esc_html(wp_date(get_option('date_format'), strtotime($status['deadline']))),
+            esc_url('https://app.cache-boost.com/')
+        );
+        printf('<div class="notice notice-warning"><p>%s</p></div>', wp_kses($message, $allowed));
+    }
 });
 
 add_action('wp_ajax_cbwarmer_dismiss_notice', function () {

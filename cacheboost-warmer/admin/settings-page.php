@@ -306,8 +306,9 @@ function cbwarmer_sanitize_options(array $input): array {
     $key_changed = ($old['api_key'] ?? '') !== ($output['api_key'] ?? '');
 
     if ($key_changed) {
-        // Validation status belonged to the previous key/site.
+        // Validation status and account state belonged to the previous key/site.
         delete_option(\CacheBoostWarmer\SiteValidation::STATUS_OPTION);
+        \CacheBoostWarmer\AccountStatus::clear();
     }
 
     if ($key_changed && !empty($output['api_key'])) {
