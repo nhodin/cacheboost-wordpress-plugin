@@ -3,7 +3,7 @@
  * Plugin Name: CacheBoost Warmer
  * Plugin URI:  https://www.cache-boost.com/wordpress
  * Description: Notifies CacheBoost API after cache purge events to trigger targeted or full cache warming.
- * Version:     1.0.3
+ * Version:     1.1.0
  * Requires at least: 6.0
  * Requires PHP: 8.0
  * Author:      CacheBoost
@@ -15,7 +15,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CBWARMER_VERSION', '1.0.3');
+define('CBWARMER_VERSION', '1.1.0');
 define('CBWARMER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-logger.php';
@@ -26,6 +26,7 @@ require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-native.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-cache-plugins.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-site-validation.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-connect.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/menu.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/settings-page.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/history-page.php';
@@ -46,7 +47,7 @@ add_action('admin_notices', function () {
     $settings_url = admin_url('admin.php?page=cbwarmer');
     $message = sprintf(
         /* translators: %s: link to CacheBoost settings page */
-        __('CacheBoost Warmer is installed. <a href="%s">Configure your API key</a> to start warming your cache.', 'cacheboost-warmer'),
+        __('CacheBoost Warmer is installed. <a href="%s">Connect to CacheBoost</a> to start warming your cache.', 'cacheboost-warmer'),
         esc_url($settings_url)
     );
     printf(

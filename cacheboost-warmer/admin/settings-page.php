@@ -12,6 +12,76 @@ add_action('wp_ajax_cbwarmer_fetch_boosts',   'cbwarmer_ajax_fetch_boosts');
 
 add_action('admin_enqueue_scripts', 'cbwarmer_enqueue_settings_assets');
 
+add_action('admin_post_cbwarmer_connect', 'cbwarmer_start_connect');
+// After register_setting() (priority 10) so saving the new key goes through cbwarmer_sanitize_options().
+add_action('admin_init', 'cbwarmer_handle_connect_callback', 20);
+
+function cbwarmer_connect_url(): string {
+    return wp_nonce_url(admin_url('admin-post.php?action=cbwarmer_connect'), 'cbwarmer_connect');
+}
+
+function cbwarmer_start_connect(): void {
+    if (!current_user_can('manage_options')) wp_die();
+    check_admin_referer('cbwarmer_connect');
+    // External on purpose: the CacheBoost sign-up / consent page.
+    wp_redirect(\CacheBoostWarmer\Connect::authorize_url());
+    exit;
+}
+
+/**
+ * Return from app.cache-boost.com/connect/wordpress (?state=…&code=… or &error=…).
+ * The state must match a transient created by this admin, which also protects this request against CSRF.
+ */
+function cbwarmer_handle_connect_callback(): void {
+    if (($_GET['page'] ?? '') !== 'cbwarmer' || !isset($_GET['state']) || !current_user_can('manage_options')) return;
+
+    $result = \CacheBoostWarmer\Connect::handle_callback(
+        sanitize_text_field(wp_unslash($_GET['state'])),
+        sanitize_text_field(wp_unslash($_GET['code'] ?? '')),
+        sanitize_text_field(wp_unslash($_GET['error'] ?? ''))
+    );
+
+    if ($result['success']) {
+        $opts      = get_option('cbwarmer_options', []);
+        $ping      = \CacheBoostWarmer\ApiClient::ping($result['api_key'], 'https://api.cache-boost.com');
+        $available = $ping['regions'] ?? [];
+        // Same default region as the settings form: the admin's choice, else US, else any available region.
+        $preferred = array_values(array_intersect($opts['regions'] ?? [], $available))
+            ?: (in_array('us', $available, true) ? ['us'] : $available);
+        $boost_id  = \CacheBoostWarmer\Connect::ensure_full_warming_boost($result['api_key'], $result['site_id'], $preferred);
+
+        // Same input as the settings form: cbwarmer_sanitize_options() resolves the site and validates the domain.
+        update_option('cbwarmer_options', [
+            'enabled'          => 1,
+            'api_key'          => $result['api_key'],
+            'smart_enabled'    => $opts['smart_enabled'] ?? true,
+            'full_enabled'     => $opts['full_enabled'] ?? true,
+            'boost_id'         => $boost_id ?: (int) ($opts['boost_id'] ?? 0),
+            'stock_warming'    => $opts['stock_warming'] ?? false,
+            'dashboard_widget' => $opts['dashboard_widget'] ?? true,
+            'regions'          => $opts['regions'] ?? [],
+        ]);
+    }
+
+    // Drop the one-time code from the URL and the browser history.
+    wp_safe_redirect(admin_url('admin.php?page=cbwarmer&cbwarmer_connect=' . ($result['success'] ? 'ok' : $result['reason'])));
+    exit;
+}
+
+function cbwarmer_render_connect_notice(): void {
+    $status = sanitize_key($_GET['cbwarmer_connect'] ?? '');
+    $notices = [
+        'ok'              => ['success', __('Connected to CacheBoost. Your pages will be warmed after each cache purge.', 'cacheboost-warmer')],
+        'denied'          => ['warning', __('Connection cancelled.', 'cacheboost-warmer')],
+        'invalid_state'   => ['error', __('The connection link expired or was opened in another session. Please try again.', 'cacheboost-warmer')],
+        'exchange_failed' => ['error', __('Could not finish connecting to CacheBoost. Please try again, or paste an API key below.', 'cacheboost-warmer')],
+    ];
+    if (!isset($notices[$status])) return;
+
+    [$type, $message] = $notices[$status];
+    printf('<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr($type), esc_html($message));
+}
+
 /**
  * Labels for the region codes returned by GET /v1/me (ISO 3166-1 alpha-2).
  * A code missing here is shown upper-cased, so a new CacheBoost region still appears.
@@ -315,6 +385,7 @@ function cbwarmer_render_settings_page(): void {
     <div class="wrap">
         <?php cbwarmer_render_admin_header(__('CacheBoost Warmer', 'cacheboost-warmer')); ?>
         <?php settings_errors('cbwarmer_options'); ?>
+        <?php cbwarmer_render_connect_notice(); ?>
 
         <?php if (!empty($options['api_key']) && \CacheBoostWarmer\SiteValidation::is_pending()): ?>
             <div class="notice notice-warning inline">
@@ -334,6 +405,26 @@ function cbwarmer_render_settings_page(): void {
             <?php settings_fields('cbwarmer_settings'); ?>
 
             <table class="form-table" role="presentation">
+
+                <tr>
+                    <th scope="row"><?php esc_html_e('CacheBoost account', 'cacheboost-warmer'); ?></th>
+                    <td>
+                        <?php if (empty($options['api_key'])): ?>
+                            <a href="<?php echo esc_url(cbwarmer_connect_url()); ?>" class="button button-primary">
+                                <?php esc_html_e('Connect to CacheBoost', 'cacheboost-warmer'); ?>
+                            </a>
+                            <p class="description">
+                                <?php esc_html_e('Sign in or create a free account (500 URLs per month, no credit card). Your site, its sitemap and the full-site warming are set up automatically.', 'cacheboost-warmer'); ?>
+                            </p>
+                        <?php else: ?>
+                            <span class="dashicons dashicons-yes-alt" style="color:#46b450;vertical-align:middle"></span>
+                            <?php esc_html_e('Connected', 'cacheboost-warmer'); ?>
+                            <a href="<?php echo esc_url(cbwarmer_connect_url()); ?>" class="button" style="margin-left:8px">
+                                <?php esc_html_e('Reconnect', 'cacheboost-warmer'); ?>
+                            </a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
 
                 <tr>
                     <th scope="row"><?php esc_html_e('Enable', 'cacheboost-warmer'); ?></th>
@@ -359,7 +450,7 @@ function cbwarmer_render_settings_page(): void {
                             echo wp_kses(
                                 sprintf(
                                     /* translators: %s: link to CacheBoost profile page */
-                                    __('Required scopes: <code>sites:read</code>, <code>boosts:read</code>, <code>boosts:write</code>, <code>runs:read</code>. Generate your API key in your <a href="%s" target="_blank" rel="noopener">CacheBoost profile</a>.', 'cacheboost-warmer'),
+                                    __('Filled in automatically when you connect. You can also paste a key generated in your <a href="%s" target="_blank" rel="noopener">CacheBoost profile</a> (scopes: <code>sites:read</code>, <code>boosts:read</code>, <code>boosts:write</code>, <code>runs:read</code>).', 'cacheboost-warmer'),
                                     'https://app.cache-boost.com/profile'
                                 ),
                                 ['code' => [], 'a' => ['href' => [], 'target' => [], 'rel' => []]]

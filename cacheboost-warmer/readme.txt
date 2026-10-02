@@ -1,18 +1,20 @@
-=== CacheBoost Warmer ===
+=== CacheBoost Warmer – Cache Preload after Purge ===
 Contributors: nhodin
-Tags: cache, cache warming, performance, woocommerce, page speed, GEO, SEO
+Tags: cache, preload, cache warming, woocommerce, performance
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Notifies the CacheBoost API after cache purge events to trigger targeted or full cache warming, keeping your pages served from cache at all times.
+Re-warms your pages automatically after every cache purge, from the regions your visitors are in. Works with WP Rocket, LiteSpeed and any CDN.
 
 == Description ==
 
 Every cache purge leaves your pages "cold": the first visitor after a purge pays the full origin render time. CacheBoost Warmer closes that gap. Whenever a purge or invalidation occurs in WordPress, it tells the CacheBoost API to re-warm the affected pages, so your cache stays hot and every visitor hits a fast, cached response.
+
+**Free plan:** 500 warmed URLs per month, no credit card. The plugin requires a CacheBoost account ([sign up](https://app.cache-boost.com/register)); warming requests are sent from CacheBoost's servers in 12 regions, not from your hosting.
 
 **Features:**
 
@@ -28,23 +30,19 @@ Every cache purge leaves your pages "cold": the first visitor after a purge pays
 
 1. Upload the `cacheboost-warmer` folder to `wp-content/plugins/`.
 2. Activate the plugin via **Plugins → Installed Plugins**.
-3. Go to the **CacheBoost** menu in the admin sidebar and enter your API key.
+3. Go to the **CacheBoost** menu in the admin sidebar and click **Connect to CacheBoost**.
 
 == Configuration ==
 
-= Step 1 — Get your API key =
+= Step 1 — Connect =
 
-1. Log in to [app.cache-boost.com](https://app.cache-boost.com).
-2. Go to your [profile](https://app.cache-boost.com/profile) and click **New API key**.
-3. Select the scopes: `sites:read`, `sites:write`, `boosts:read`, `boosts:write`, `runs:read`.
-4. Copy the generated key (format `cb_live_…`).
+In the **CacheBoost** menu, click **Connect to CacheBoost**, then sign in or create a free account and click **Authorize**. Back in WordPress, everything is set up: your site is added to your CacheBoost account and validated, its sitemap is registered, and a Boost is created for full-site warming.
 
-= Step 2 — Configure the plugin =
+Prefer an API key? Generate one in your [profile](https://app.cache-boost.com/profile) with the scopes `sites:read`, `sites:write`, `boosts:read`, `boosts:write`, `runs:read`, and paste it in the **API Key** field.
 
-Go to the **CacheBoost** menu:
+= Step 2 — Adjust the settings (optional) =
 
 * **Enable** — master on/off switch.
-* **API Key** — paste your `cb_live_...` key.
 * **Warming triggers** — Smart (targeted URLs) and/or Full (entire site), each can be toggled independently.
 * **Stock Warming** — (WooCommerce only) warm product pages after stock changes.
 * **Test Connection** — validate your API key without leaving the admin. If your domain is not yet validated in CacheBoost, the plugin validates it automatically (requires the `sites:write` scope).
@@ -92,6 +90,9 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.1.0 =
+* New **Connect to CacheBoost** button: sign in or sign up, authorize, done. No more copying an API key, adding the domain or creating a Boost by hand.
 
 = 1.0.3 =
 * Region labels follow the CacheBoost catalogue (ISO country codes: France, Germany, United Kingdom, United States, Spain, Italy…). Click Test Connection to refresh the list of available regions.
