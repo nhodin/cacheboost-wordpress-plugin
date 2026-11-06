@@ -4,7 +4,7 @@ Tags: cache, preload, cache warming, woocommerce, performance
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.2.0 =
+* FlyingPress support: the cache is re-warmed after each FlyingPress purge. A full purge runs your Full Warming Boost, a page purge warms that page only, and purges less than a minute apart trigger a single warm. On by default, can be turned off in the settings.
 
 = 1.1.1 =
 * Warns in the WordPress admin when the CacheBoost account email must be verified, and when warming is paused because it was not.
