@@ -30,6 +30,10 @@ class Config {
         return !empty($this->options['stock_warming']);
     }
 
+    public function is_flyingpress_warming_enabled(): bool {
+        return $this->options['flyingpress_warming'] ?? true;
+    }
+
     public function is_dashboard_widget_enabled(): bool {
         return $this->options['dashboard_widget'] ?? true;
     }

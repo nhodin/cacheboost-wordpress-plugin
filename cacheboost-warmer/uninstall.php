@@ -12,6 +12,7 @@ $cbwarmer_options = [
 
 $cbwarmer_transients = [
     'cbwarmer_widget_data',
+    'cbwarmer_flyingpress_full_debounce',
 ];
 
 foreach ($cbwarmer_options as $cbwarmer_option) {

@@ -23,7 +23,7 @@ Every cache purge leaves your pages "cold": the first visitor after a purge pays
 * **Deduplication** — multiple purge events within the same HTTP request produce a single API call.
 * **Non-blocking** — uses `wp_remote_post()` with `blocking => false`; never delays a WordPress request.
 * **WooCommerce** — warms product and category pages on save; optional stock-change warming.
-* **Cache plugin integrations** — WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache.
+* **Cache plugin integrations** — WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache, FlyingPress.
 * **Multisite** — each sub-site has its own settings and API key.
 
 == Installation ==
@@ -49,7 +49,7 @@ Prefer an API key? Generate one in your [profile](https://app.cache-boost.com/pr
 
 == Cache plugin support ==
 
-WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache
+WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache, FlyingPress
 
 == Frequently Asked Questions ==
 

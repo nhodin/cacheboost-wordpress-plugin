@@ -7,7 +7,7 @@ Automatically triggers a CacheBoost cache warm-up whenever a flush or invalidati
 - **Deduplication**: multiple purge events within the same HTTP request produce a single API call.
 - **Non-blocking**: `wp_remote_post()` with `blocking => false`; never delays a WordPress request.
 - **WooCommerce**: warms product and category pages on save; opt-in stock-change warming.
-- **Cache plugin integrations**: WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache.
+- **Cache plugin integrations**: WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache, FlyingPress.
 
 ---
 
@@ -84,6 +84,9 @@ Go to **Settings → CacheBoost**.
 | W3 Total Cache | `function_exists('w3tc_pgcache_flush')` | `w3tc_flush_all` | `w3tc_flush_post` |
 | LiteSpeed Cache | `class_exists('LiteSpeed_Cache_API')` | `litespeed_purge_all` | `litespeed_purge_post` |
 | WP Super Cache | `function_exists('wp_cache_clear_cache')` | `wp_cache_cleared` | — |
+| FlyingPress | `class_exists('FlyingPress\Purge')` + option `flyingpress_warming` (on by default) | `flying_press_purge_pages:after`, `flying_press_purge_everything:after` | `flying_press_purge_urls:after`, `flying_press_purge_url:after` |
+
+FlyingPress hook names: [Hooking into purge events](https://docs.flyingpress.com/en/articles/11405950-hooking-into-purge-events-in-flyingpress); `FlyingPress\Purge` class: [Programmatically purge and preload cache](https://docs.flyingpress.com/en/articles/11406092-programmatically-purge-and-preload-cache). A FlyingPress full purge sets the `cbwarmer_flyingpress_full_debounce` transient (60 s): further full purges and page purges in that window are absorbed by the boost already requested.
 
 ### WooCommerce
 
@@ -128,7 +131,7 @@ cacheboost-warmer/
 │   ├── class-api-client.php           # HTTP calls to CacheBoost API
 │   ├── class-event-buffer.php         # Deduplication + shutdown flush
 │   ├── class-hooks-native.php         # Native WordPress hooks
-│   ├── class-hooks-cache-plugins.php  # WP Rocket, W3TC, LiteSpeed, WP Super Cache
+│   ├── class-hooks-cache-plugins.php  # WP Rocket, W3TC, LiteSpeed, WP Super Cache, FlyingPress
 │   └── class-hooks-woocommerce.php    # WooCommerce hooks
 ├── admin/
 │   └── settings-page.php              # Settings > CacheBoost admin page

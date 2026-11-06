@@ -44,7 +44,14 @@ class ConfigTest extends TestCase
         self::assertTrue($config->is_smart_enabled());
         self::assertTrue($config->is_full_enabled());
         self::assertFalse($config->is_stock_warming_enabled());
+        // On by default: a site running FlyingPress is cold after every purge unless we warm.
+        self::assertTrue($config->is_flyingpress_warming_enabled());
         self::assertSame('https://api.cache-boost.com', $config->get_api_endpoint());
+    }
+
+    public function test_flyingpress_warming_can_be_turned_off(): void
+    {
+        self::assertFalse($this->makeConfig(['flyingpress_warming' => false])->is_flyingpress_warming_enabled());
     }
 
     // ── is_enabled ───────────────────────────────────────────────────────────

@@ -58,6 +58,7 @@ function cbwarmer_handle_connect_callback(): void {
             'full_enabled'     => $opts['full_enabled'] ?? true,
             'boost_id'         => $boost_id ?: (int) ($opts['boost_id'] ?? 0),
             'stock_warming'    => $opts['stock_warming'] ?? false,
+            'flyingpress_warming' => $opts['flyingpress_warming'] ?? true,
             'dashboard_widget' => $opts['dashboard_widget'] ?? true,
             'regions'          => $opts['regions'] ?? [],
         ]);
@@ -277,6 +278,10 @@ function cbwarmer_sanitize_options(array $input): array {
 
     $output['stock_warming']    = !empty($input['stock_warming']);
     $output['dashboard_widget'] = !empty($input['dashboard_widget']);
+    // The checkbox is only rendered while FlyingPress is active: keep the stored value (on by default) otherwise.
+    $output['flyingpress_warming'] = class_exists('FlyingPress\Purge')
+        ? !empty($input['flyingpress_warming'])
+        : (bool) ($old['flyingpress_warming'] ?? true);
 
     $output['api_endpoint'] = 'https://api.cache-boost.com';
 
@@ -297,6 +302,9 @@ function cbwarmer_sanitize_options(array $input): array {
     }
     if (($old['stock_warming'] ?? false) !== $output['stock_warming']) {
         $changes[] = 'stock_warming: ' . ($output['stock_warming'] ? 'yes' : 'no');
+    }
+    if (($old['flyingpress_warming'] ?? true) !== $output['flyingpress_warming']) {
+        $changes[] = 'flyingpress_warming: ' . ($output['flyingpress_warming'] ? 'yes' : 'no');
     }
     if (($old['boost_id'] ?? 0) !== $output['boost_id']) {
         $changes[] = 'boost_id: ' . ($output['boost_id'] ?: '(none)');
@@ -516,6 +524,20 @@ function cbwarmer_render_settings_page(): void {
                                 <?php checked(!empty($options['stock_warming'])); ?> />
                             <?php esc_html_e('Warm product pages when stock changes (e.g. after an order)', 'cacheboost-warmer'); ?>
                         </label>
+                    </td>
+                </tr>
+                <?php endif; ?>
+
+                <?php if (class_exists('FlyingPress\Purge')): ?>
+                <tr>
+                    <th scope="row"><?php esc_html_e('FlyingPress', 'cacheboost-warmer'); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="cbwarmer_options[flyingpress_warming]" value="1"
+                                <?php checked($options['flyingpress_warming'] ?? true); ?> />
+                            <?php esc_html_e('Warm the cache after each FlyingPress purge', 'cacheboost-warmer'); ?>
+                        </label>
+                        <p class="description"><?php esc_html_e('A full purge runs the Full Warming Boost, a page purge warms that page only. Purges less than a minute apart trigger a single warm.', 'cacheboost-warmer'); ?></p>
                     </td>
                 </tr>
                 <?php endif; ?>
