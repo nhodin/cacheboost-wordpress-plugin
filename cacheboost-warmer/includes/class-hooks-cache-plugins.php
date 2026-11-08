@@ -13,7 +13,8 @@ class HooksCachePlugins {
     public function register(): void {
         if (function_exists('rocket_clean_domain'))  $this->register_wprocket();
         if (function_exists('w3tc_pgcache_flush'))   $this->register_w3tc();
-        if (class_exists('LiteSpeed_Cache_API'))     $this->register_litespeed();
+        // LiteSpeed Cache 3.0+ dropped the LiteSpeed_Cache_API class; LSCWP_V is defined by every version since.
+        if (defined('LSCWP_V'))                      $this->register_litespeed();
         if (function_exists('wp_cache_clear_cache')) $this->register_wpsupercache();
         if (class_exists('FlyingPress\Purge') && $this->config->is_flyingpress_warming_enabled()) {
             $this->register_flyingpress();
@@ -77,16 +78,29 @@ class HooksCachePlugins {
         }
     }
 
+    /**
+     * Listens to the events LiteSpeed fires after a purge (src/purge.cls.php), not to litespeed_purge_all /
+     * litespeed_purge_post: those are commands other plugins fire to request a purge, so a purge from the
+     * LiteSpeed admin or on publish never reaches them.
+     */
     private function register_litespeed(): void {
         if ($this->config->is_full_enabled()) {
-            add_action('litespeed_purge_all', fn () => $this->buffer->push_full());
+            // Fired by Purge LSCache and by Purge All, which then also fires litespeed_purged_all: hooking both would warm twice.
+            add_action('litespeed_purged_all_lscache', [$this, 'on_litespeed_full_purge']);
         }
         if ($this->config->is_smart_enabled()) {
-            add_action('litespeed_purge_post', function ($post_id) {
-                $url = get_permalink($post_id);
-                if ($url) $this->buffer->push_urls([$url]);
-            });
+            // Fired for each purged post, including on publish (transition_post_status).
+            add_action('litespeed_purged_post', [$this, 'on_litespeed_post_purge']);
         }
+    }
+
+    public function on_litespeed_full_purge(): void {
+        $this->buffer->push_full();
+    }
+
+    public function on_litespeed_post_purge($post_id): void {
+        $url = get_permalink((int) $post_id);
+        if ($url) $this->buffer->push_urls([$url]);
     }
 
     private function register_wpsupercache(): void {

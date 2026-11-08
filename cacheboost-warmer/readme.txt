@@ -4,7 +4,7 @@ Tags: cache, preload, cache warming, woocommerce, performance
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.2.1 =
+* Fix: LiteSpeed Cache support works again with LiteSpeed Cache 3.0 and later. The cache is re-warmed after Purge All and Purge LSCache, and a post is re-warmed when LiteSpeed purges it, including on publish.
 
 = 1.2.0 =
 * FlyingPress support: the cache is re-warmed after each FlyingPress purge. A full purge runs your Full Warming Boost, a page purge warms that page only, and purges less than a minute apart trigger a single warm. On by default, can be turned off in the settings.
