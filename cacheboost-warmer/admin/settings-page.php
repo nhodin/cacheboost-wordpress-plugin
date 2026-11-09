@@ -9,6 +9,7 @@ add_action('admin_init', function () {
 
 add_action('wp_ajax_cbwarmer_test_connection', 'cbwarmer_ajax_test_connection');
 add_action('wp_ajax_cbwarmer_fetch_boosts',   'cbwarmer_ajax_fetch_boosts');
+add_action('wp_ajax_cbwarmer_send_environment', 'cbwarmer_ajax_send_environment');
 
 add_action('admin_enqueue_scripts', 'cbwarmer_enqueue_settings_assets');
 
@@ -60,6 +61,7 @@ function cbwarmer_handle_connect_callback(): void {
             'stock_warming'    => $opts['stock_warming'] ?? false,
             'flyingpress_warming' => $opts['flyingpress_warming'] ?? true,
             'dashboard_widget' => $opts['dashboard_widget'] ?? true,
+            'share_environment' => $opts['share_environment'] ?? true,
             'regions'          => $opts['regions'] ?? [],
         ]);
     }
@@ -127,6 +129,7 @@ function cbwarmer_enqueue_settings_assets(string $hook): void {
         'ajaxUrl'         => admin_url('admin-ajax.php'),
         'nonce'           => wp_create_nonce('cbwarmer_test_nonce'),
         'clearLogsNonce'  => wp_create_nonce('cbwarmer_clear_logs_nonce'),
+        'environmentNonce' => wp_create_nonce('cbwarmer_environment_nonce'),
         'savedBoostId'    => (string) ($options['boost_id'] ?? ''),
         'regionLabels'    => cbwarmer_region_labels(),
         'selectedRegions' => $selected_regions,
@@ -141,6 +144,7 @@ function cbwarmer_enqueue_settings_assets(string $hook): void {
             'requestFailed' => __('Request failed.', 'cacheboost-warmer'),
             'noActivity'    => __('No activity logged yet.', 'cacheboost-warmer'),
             'regionsHelp'   => __('Select which regions will warm your cache. Leave all unchecked to use every available region.', 'cacheboost-warmer'),
+            'sending'       => __('Sending…', 'cacheboost-warmer'),
         ],
     ]);
 }
@@ -243,6 +247,36 @@ function cbwarmer_ajax_test_connection(): void {
     }
 }
 
+/** "Send now" button: sends the cache configuration even if unchanged. */
+function cbwarmer_ajax_send_environment(): void {
+    check_ajax_referer('cbwarmer_environment_nonce', 'nonce');
+    if (!current_user_can('manage_options')) wp_die();
+
+    $result   = \CacheBoostWarmer\EnvironmentReporter::send(true);
+    $messages = [
+        'sent'            => __('Cache configuration sent.', 'cacheboost-warmer'),
+        'unchanged'       => __('Cache configuration sent. Nothing changed since the last one.', 'cacheboost-warmer'),
+        'not_connected'   => __('Connect to CacheBoost first.', 'cacheboost-warmer'),
+        'plugin_disabled' => __('The plugin is disabled: check Enable and save the settings first.', 'cacheboost-warmer'),
+        'disabled'        => __('Sharing is turned off: check the box and save the settings first.', 'cacheboost-warmer'),
+        'deleted'         => __('Sharing is turned off: CacheBoost deleted the configuration it had received.', 'cacheboost-warmer'),
+    ];
+
+    if ($result['code'] === 'error') {
+        wp_send_json_error(['message' => sprintf(
+            /* translators: %s: error detail */
+            __('Sending failed: %s', 'cacheboost-warmer'),
+            $result['message'] ?? ''
+        )]);
+    }
+
+    $payload = ['message' => $messages[$result['code']]];
+    if ($result['success']) {
+        wp_send_json_success($payload);
+    }
+    wp_send_json_error($payload);
+}
+
 add_action('wp_ajax_cbwarmer_clear_logs', 'cbwarmer_ajax_clear_logs');
 
 function cbwarmer_ajax_clear_logs(): void {
@@ -278,6 +312,11 @@ function cbwarmer_sanitize_options(array $input): array {
 
     $output['stock_warming']    = !empty($input['stock_warming']);
     $output['dashboard_widget'] = !empty($input['dashboard_widget']);
+    // The form always posts this key (hidden 0 + checkbox 1). Code saving the options without it, such as
+    // Test Connection on settings saved before 1.3, keeps the stored value, on by default.
+    $output['share_environment'] = array_key_exists('share_environment', $input)
+        ? !empty($input['share_environment'])
+        : (bool) ($old['share_environment'] ?? true);
     // The checkbox is only rendered while FlyingPress is active: keep the stored value (on by default) otherwise.
     $output['flyingpress_warming'] = class_exists('FlyingPress\Purge')
         ? !empty($input['flyingpress_warming'])
@@ -305,6 +344,9 @@ function cbwarmer_sanitize_options(array $input): array {
     }
     if (($old['flyingpress_warming'] ?? true) !== $output['flyingpress_warming']) {
         $changes[] = 'flyingpress_warming: ' . ($output['flyingpress_warming'] ? 'yes' : 'no');
+    }
+    if (($old['share_environment'] ?? true) !== $output['share_environment']) {
+        $changes[] = 'share_environment: ' . ($output['share_environment'] ? 'yes' : 'no');
     }
     if (($old['boost_id'] ?? 0) !== $output['boost_id']) {
         $changes[] = 'boost_id: ' . ($output['boost_id'] ?: '(none)');
@@ -550,6 +592,43 @@ function cbwarmer_render_settings_page(): void {
                                 <?php checked($options['dashboard_widget'] ?? true); ?> />
                             <?php esc_html_e('Show last warming run stats on the WordPress dashboard', 'cacheboost-warmer'); ?>
                         </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php esc_html_e('Cache diagnostics', 'cacheboost-warmer'); ?></th>
+                    <td>
+                        <input type="hidden" name="cbwarmer_options[share_environment]" value="0" />
+                        <label>
+                            <input type="checkbox" name="cbwarmer_options[share_environment]" value="1"
+                                <?php checked($options['share_environment'] ?? true); ?> />
+                            <?php esc_html_e('Share the cache configuration with CacheBoost', 'cacheboost-warmer'); ?>
+                        </label>
+                        <p class="description">
+                            <?php esc_html_e('Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin\'s settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce and multilingual plugins; drop-ins and object cache; the hosting provider; your CacheBoost warming settings.', 'cacheboost-warmer'); ?>
+                        </p>
+                        <p class="description">
+                            <?php esc_html_e('Never any API key, licence key, password, email address or content. Unchecking the box stops sending and deletes the configuration already sent.', 'cacheboost-warmer'); ?>
+                        </p>
+                        <?php if (!empty($options['api_key']) && ($options['share_environment'] ?? true)): ?>
+                            <p style="margin-top:8px">
+                                <button type="button" id="cb-send-environment" class="button">
+                                    <?php esc_html_e('Send now', 'cacheboost-warmer'); ?>
+                                </button>
+                                <span id="cb-send-environment-result" style="margin-left:10px;vertical-align:middle;">
+                                    <?php
+                                    $sent_at = \CacheBoostWarmer\EnvironmentReporter::last_sent_at();
+                                    if ($sent_at !== null) {
+                                        echo esc_html(sprintf(
+                                            /* translators: %s: date and time */
+                                            __('Last sent: %s', 'cacheboost-warmer'),
+                                            wp_date(get_option('date_format') . ' ' . get_option('time_format'), $sent_at)
+                                        ));
+                                    }
+                                    ?>
+                                </span>
+                            </p>
+                        <?php endif; ?>
                     </td>
                 </tr>
 

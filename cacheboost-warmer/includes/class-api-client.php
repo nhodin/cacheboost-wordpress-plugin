@@ -58,6 +58,76 @@ class ApiClient {
     }
 
     /**
+     * Sends the environment snapshot. Blocking — called from WP-Cron or admin AJAX, never while serving a page.
+     *
+     * @return array{success: bool, stored?: bool, message?: string}
+     */
+    public static function send_environment(int $site_id, array $payload): array {
+        $config = new Config();
+
+        $resp = wp_remote_post(rtrim($config->get_api_endpoint(), '/') . "/v1/sites/{$site_id}/environment", [
+            'timeout' => 15,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $config->get_api_key(),
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode($payload),
+        ]);
+
+        if (is_wp_error($resp)) {
+            Logger::log('api', sprintf('POST /v1/sites/%d/environment failed: %s', $site_id, $resp->get_error_message()), 'error');
+            return ['success' => false, 'message' => $resp->get_error_message()];
+        }
+
+        $code = wp_remote_retrieve_response_code($resp);
+        if ($code !== 200) {
+            Logger::log('api', sprintf('POST /v1/sites/%d/environment failed: HTTP %d', $site_id, $code), 'error');
+            return ['success' => false, 'message' => self::environment_error($code)];
+        }
+
+        $body   = json_decode(wp_remote_retrieve_body($resp), true);
+        $stored = is_array($body) && !empty($body['stored']);
+        Logger::log('api', sprintf('POST /v1/sites/%d/environment OK — %s', $site_id, $stored ? 'stored' : 'unchanged'));
+
+        return ['success' => true, 'stored' => $stored];
+    }
+
+    /**
+     * Tells CacheBoost that sharing was turned off: it deletes the snapshots already received. Blocking, as above.
+     *
+     * @return array{success: bool, message?: string}
+     */
+    public static function delete_environment(int $site_id): array {
+        $config = new Config();
+
+        $resp = wp_remote_request(rtrim($config->get_api_endpoint(), '/') . "/v1/sites/{$site_id}/environment", [
+            'method'  => 'DELETE',
+            'timeout' => 15,
+            'headers' => ['Authorization' => 'Bearer ' . $config->get_api_key()],
+        ]);
+
+        if (is_wp_error($resp)) {
+            Logger::log('api', sprintf('DELETE /v1/sites/%d/environment failed: %s', $site_id, $resp->get_error_message()), 'error');
+            return ['success' => false, 'message' => $resp->get_error_message()];
+        }
+
+        $code = wp_remote_retrieve_response_code($resp);
+        if ($code !== 200) {
+            Logger::log('api', sprintf('DELETE /v1/sites/%d/environment failed: HTTP %d', $site_id, $code), 'error');
+            return ['success' => false, 'message' => self::environment_error($code)];
+        }
+
+        Logger::log('api', sprintf('DELETE /v1/sites/%d/environment OK', $site_id));
+        return ['success' => true];
+    }
+
+    private static function environment_error(int $code): string {
+        return $code === 403
+            ? __('Your API key needs the sites:write scope to share the cache configuration.', 'cacheboost-warmer')
+            : sprintf('HTTP %d', $code);
+    }
+
+    /**
      * Fetches scheduled boosts for a given site. Blocking — for admin AJAX only.
      *
      * @return array{success: bool, boosts: list<array{id:int,name:string}>, message?: string}

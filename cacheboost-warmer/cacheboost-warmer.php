@@ -28,6 +28,9 @@ require_once CBWARMER_PLUGIN_DIR . 'includes/class-hooks-woocommerce.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-site-validation.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-connect.php';
 require_once CBWARMER_PLUGIN_DIR . 'includes/class-account-status.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-cache-plugin-adapters.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-environment-snapshot.php';
+require_once CBWARMER_PLUGIN_DIR . 'includes/class-environment-reporter.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/menu.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/settings-page.php';
 require_once CBWARMER_PLUGIN_DIR . 'admin/history-page.php';
@@ -38,6 +41,11 @@ register_activation_hook(__FILE__, function () {
         update_option('cbwarmer_notice_dismissed', '0');
     }
 });
+
+register_deactivation_hook(__FILE__, [CacheBoostWarmer\EnvironmentReporter::class, 'unschedule']);
+
+// Registered at load time, not on init: cache plugins may save their settings earlier (migrations on plugins_loaded).
+(new CacheBoostWarmer\EnvironmentReporter())->register();
 
 add_action('admin_notices', function () {
     if (!current_user_can('manage_options')) return;

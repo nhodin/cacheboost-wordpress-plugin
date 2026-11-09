@@ -115,6 +115,40 @@
         });
     });
 
+    // ── Send the cache configuration now ──────────────────────────────────
+
+    var envBtn    = document.getElementById('cb-send-environment');
+    var envResult = document.getElementById('cb-send-environment-result');
+    if (envBtn) {
+        envBtn.addEventListener('click', function () {
+            envBtn.disabled = true;
+            envResult.textContent = CacheBoostWarmerSettings.i18n.sending;
+            envResult.style.color = '';
+
+            var data = new FormData();
+            data.append('action', 'cbwarmer_send_environment');
+            data.append('nonce',  CacheBoostWarmerSettings.environmentNonce);
+
+            fetch(CacheBoostWarmerSettings.ajaxUrl, {
+                method: 'POST',
+                body: data,
+                credentials: 'same-origin',
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                envResult.textContent = json.data.message;
+                envResult.style.color = json.success ? 'green' : '#cc0000';
+            })
+            .catch(function () {
+                envResult.textContent = CacheBoostWarmerSettings.i18n.requestFailed;
+                envResult.style.color = '#cc0000';
+            })
+            .finally(function () {
+                envBtn.disabled = false;
+            });
+        });
+    }
+
     var clearBtn = document.getElementById('cb-clear-logs');
     if (clearBtn) {
         clearBtn.addEventListener('click', function () {

@@ -34,6 +34,11 @@ class Config {
         return $this->options['flyingpress_warming'] ?? true;
     }
 
+    /** On by default: connecting to CacheBoost is the consent (wordpress.org guideline 7). */
+    public function is_environment_sharing_enabled(): bool {
+        return (bool) ($this->options['share_environment'] ?? true);
+    }
+
     public function is_dashboard_widget_enabled(): bool {
         return $this->options['dashboard_widget'] ?? true;
     }
