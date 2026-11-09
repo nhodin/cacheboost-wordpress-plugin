@@ -69,3 +69,50 @@ msgstr "Ungültiges API-Schlüssel-Format."
 
 msgid "Invalid API key. Expected format: cb_live_..."
 msgstr "Ungültiger API-Schlüssel. Erwartetes Format: cb_live_..."
+
+msgid "Cache diagnostics"
+msgstr "Cache-Diagnose"
+
+msgid "Share the cache configuration with CacheBoost"
+msgstr "Die Cache-Konfiguration mit CacheBoost teilen"
+
+msgid "Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin's settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce and multilingual plugins; drop-ins and object cache; the hosting provider; your CacheBoost warming settings."
+msgstr "Damit kann CacheBoost Ihre Cache-Einrichtung prüfen und erklären, wie sie zu korrigieren ist. Gesendet, wenn Sie sich verbinden oder diese Einstellungen speichern, wenn ein Plugin aktiviert, deaktiviert oder aktualisiert wird, wenn sich die Einstellungen eines Cache-Plugins ändern, und einmal täglich: WordPress-, PHP- und Plugin-Versionen; die installierten Cache-Plugins und ihre Cache-Einstellungen (Seiten-Cache, Lebensdauer, Cache für Mobilgeräte und angemeldete Benutzer, Vorladen, ignorierte URL-Parameter, CDN-Bereinigung, Anzahl ausgeschlossener Cookies und URLs); WooCommerce und Mehrsprachigkeits-Plugins; Drop-ins und Objekt-Cache; der Hosting-Anbieter; Ihre CacheBoost-Aufwärmeinstellungen."
+
+msgid "Never any API key, licence key, password, email address or content. Unchecking the box stops sending and deletes the configuration already sent."
+msgstr "Niemals API-Schlüssel, Lizenzschlüssel, Passwörter, E-Mail-Adressen oder Inhalte. Wenn Sie das Kästchen deaktivieren, wird nichts mehr gesendet und die bereits gesendete Konfiguration gelöscht."
+
+msgid "Send now"
+msgstr "Jetzt senden"
+
+#, php-format
+msgid "Last sent: %s"
+msgstr "Zuletzt gesendet: %s"
+
+msgid "Sending…"
+msgstr "Wird gesendet…"
+
+msgid "Cache configuration sent."
+msgstr "Cache-Konfiguration gesendet."
+
+msgid "Cache configuration sent. Nothing changed since the last one."
+msgstr "Cache-Konfiguration gesendet. Seit der letzten hat sich nichts geändert."
+
+msgid "Connect to CacheBoost first."
+msgstr "Verbinden Sie sich zuerst mit CacheBoost."
+
+msgid "The plugin is disabled: check Enable and save the settings first."
+msgstr "Das Plugin ist deaktiviert: Aktivieren Sie zuerst „Aktivieren“ und speichern Sie die Einstellungen."
+
+msgid "Sharing is turned off: check the box and save the settings first."
+msgstr "Das Teilen ist ausgeschaltet: Aktivieren Sie zuerst das Kästchen und speichern Sie die Einstellungen."
+
+msgid "Sharing is turned off: CacheBoost deleted the configuration it had received."
+msgstr "Das Teilen ist ausgeschaltet: CacheBoost hat die erhaltene Konfiguration gelöscht."
+
+#, php-format
+msgid "Sending failed: %s"
+msgstr "Senden fehlgeschlagen: %s"
+
+msgid "Your API key needs the sites:write scope to share the cache configuration."
+msgstr "Ihr API-Schlüssel benötigt die Berechtigung sites:write, um die Cache-Konfiguration zu teilen."

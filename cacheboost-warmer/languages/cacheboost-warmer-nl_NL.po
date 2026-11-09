@@ -69,3 +69,50 @@ msgstr "Ongeldig API-sleutelformaat."
 
 msgid "Invalid API key. Expected format: cb_live_..."
 msgstr "Ongeldige API-sleutel. Verwacht formaat: cb_live_..."
+
+msgid "Cache diagnostics"
+msgstr "Cachediagnose"
+
+msgid "Share the cache configuration with CacheBoost"
+msgstr "De cacheconfiguratie delen met CacheBoost"
+
+msgid "Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin's settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce and multilingual plugins; drop-ins and object cache; the hosting provider; your CacheBoost warming settings."
+msgstr "Hiermee kan CacheBoost uw cache-instellingen controleren en uitleggen hoe u ze corrigeert. Verzonden wanneer u verbinding maakt of deze instellingen opslaat, wanneer een plugin wordt geactiveerd, gedeactiveerd of bijgewerkt, wanneer de instellingen van een cacheplugin wijzigen, en één keer per dag: versies van WordPress, PHP en de plugins; de geïnstalleerde cacheplugins en hun cache-instellingen (paginacache, levensduur, cache voor mobiel en ingelogde gebruikers, vooraf laden, genegeerde URL-parameters, CDN-purge, aantal uitgesloten cookies en URL's); WooCommerce en meertalige plugins; drop-ins en objectcache; de hostingprovider; uw CacheBoost-opwarminstellingen."
+
+msgid "Never any API key, licence key, password, email address or content. Unchecking the box stops sending and deletes the configuration already sent."
+msgstr "Nooit API-sleutels, licentiesleutels, wachtwoorden, e-mailadressen of inhoud. Door het vakje uit te vinken stopt het verzenden en wordt de al verzonden configuratie verwijderd."
+
+msgid "Send now"
+msgstr "Nu verzenden"
+
+#, php-format
+msgid "Last sent: %s"
+msgstr "Laatst verzonden: %s"
+
+msgid "Sending…"
+msgstr "Verzenden…"
+
+msgid "Cache configuration sent."
+msgstr "Cacheconfiguratie verzonden."
+
+msgid "Cache configuration sent. Nothing changed since the last one."
+msgstr "Cacheconfiguratie verzonden. Er is niets veranderd sinds de vorige."
+
+msgid "Connect to CacheBoost first."
+msgstr "Maak eerst verbinding met CacheBoost."
+
+msgid "The plugin is disabled: check Enable and save the settings first."
+msgstr "De plugin is uitgeschakeld: vink eerst Inschakelen aan en sla de instellingen op."
+
+msgid "Sharing is turned off: check the box and save the settings first."
+msgstr "Delen staat uit: vink eerst het vakje aan en sla de instellingen op."
+
+msgid "Sharing is turned off: CacheBoost deleted the configuration it had received."
+msgstr "Delen staat uit: CacheBoost heeft de ontvangen configuratie verwijderd."
+
+#, php-format
+msgid "Sending failed: %s"
+msgstr "Verzenden mislukt: %s"
+
+msgid "Your API key needs the sites:write scope to share the cache configuration."
+msgstr "Uw API-sleutel heeft de scope sites:write nodig om de cacheconfiguratie te delen."

@@ -4,7 +4,7 @@ Tags: cache, preload, cache warming, woocommerce, performance
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Every cache purge leaves your pages "cold": the first visitor after a purge pays
 * **Non-blocking** — uses `wp_remote_post()` with `blocking => false`; never delays a WordPress request.
 * **WooCommerce** — warms product and category pages on save; optional stock-change warming.
 * **Cache plugin integrations** — WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache, FlyingPress.
+* **Cache diagnostics** — shares your cache configuration (versions, cache plugins and their cache settings, CDN purge, object cache, hosting) with CacheBoost, which checks it and explains how to fix it. Can be turned off.
 * **Multisite** — each sub-site has its own settings and API key.
 
 == Installation ==
@@ -45,6 +46,7 @@ Prefer an API key? Generate one in your [profile](https://app.cache-boost.com/pr
 * **Enable** — master on/off switch.
 * **Warming triggers** — Smart (targeted URLs) and/or Full (entire site), each can be toggled independently.
 * **Stock Warming** — (WooCommerce only) warm product pages after stock changes.
+* **Cache diagnostics** — share the cache configuration with CacheBoost (on by default). See *External Services* for what is sent.
 * **Test Connection** — validate your API key without leaving the admin. If your domain is not yet validated in CacheBoost, the plugin validates it automatically (requires the `sites:write` scope).
 
 == Cache plugin support ==
@@ -63,7 +65,15 @@ Yes, but do not network-activate. Each sub-site should have its own settings and
 
 = What is sent to the CacheBoost API? =
 
-Only the site URL, the list of page URLs to warm (Smart mode), and a timestamp. No credentials and no personal data are ever transmitted.
+To warm your cache: the site URL, the list of page URLs to warm (Smart mode) and a timestamp.
+
+For the cache diagnostics, unless you turn it off: your cache configuration. That is the WordPress, PHP and plugin versions; the cache plugins installed, with their version and cache settings (page cache on or off, cache lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN integration and purge, number of excluded cookies and URLs); WooCommerce and the multilingual plugin with its language mode; whether `WP_CACHE` is set, which plugin wrote `advanced-cache.php`, the object cache backend; the hosting provider; your CacheBoost warming settings.
+
+No credentials (API keys, licence keys, passwords), no email address, no content and no personal data are ever transmitted. Cache plugins that store Cloudflare credentials next to their settings are read key by key, so these credentials are never touched.
+
+= How do I stop sharing my cache configuration? =
+
+Uncheck **Share the cache configuration with CacheBoost** in the CacheBoost settings and save. The plugin stops sending it, and CacheBoost deletes the configurations it had received.
 
 = What happens if my API key is invalid or the API is unreachable? =
 
@@ -90,6 +100,10 @@ No problem. On a full warm, CacheBoost reads your sitemap (including multi-level
 CacheBoost only sends HTTP requests to your public URLs — the same requests any visitor would make. No credentials and no private data are ever accessed.
 
 == Changelog ==
+
+= 1.3.0 =
+* Cache diagnostics: the plugin shares your cache configuration with CacheBoost, which checks it and explains how to fix it. Full cache settings for WP Rocket, W3 Total Cache, LiteSpeed Cache, WP Super Cache and FlyingPress; main settings for WP Fastest Cache, Cache Enabler, Breeze, SiteGround Speed Optimizer, Hummingbird, WP-Optimize, Super Page Cache, Cloudflare (APO), Nginx Helper and Proxy Cache Purge; detection of Comet Cache, Swift Performance, NitroPack, Powered Cache, Autoptimize, Redis Object Cache, Object Cache Pro and Docket Cache. Sent only when it changes, never while serving a page. No credentials are ever sent.
+* New setting **Share the cache configuration with CacheBoost**, on by default. Turning it off stops sending and deletes the configuration already sent. A **Send now** button sends it at once.
 
 = 1.2.1 =
 * Fix: LiteSpeed Cache support works again with LiteSpeed Cache 3.0 and later. The cache is re-warmed after Purge All and Purge LSCache, and a post is re-warmed when LiteSpeed purges it, including on publish.
@@ -118,10 +132,15 @@ CacheBoost only sends HTTP requests to your public URLs — the same requests an
 
 == External Services ==
 
-This plugin sends data to the CacheBoost API (https://api.cache-boost.com) to trigger cache warming jobs after a purge event. Data transmitted includes the site URL, the list of page URLs to warm and a timestamp. No personal user data is sent.
+This plugin sends data to the CacheBoost API (https://api.cache-boost.com):
 
-Requests are only made when:
-- The plugin is enabled in the CacheBoost settings
+- **Cache warming**: after a purge event, to trigger cache warming jobs. Data transmitted: the site URL, the list of page URLs to warm and a timestamp.
+- **Cache diagnostics**: the site's cache configuration, so that CacheBoost can check it and explain how to fix it. Data transmitted: WordPress, PHP and plugin versions; the cache plugins installed, with their version and cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN integration and purge, number of excluded cookies and URLs); WooCommerce and multilingual plugin (WPML, Polylang) with its language mode; the `WP_CACHE` constant, the plugin that wrote `advanced-cache.php`, the object cache backend; the hosting provider; the CacheBoost warming settings. Sent when you connect or save the settings, when a plugin is activated, deactivated or updated, when a cache plugin's settings change, and by a daily WP-Cron task, only if the configuration changed. No API key, licence key, password, email address or content is ever sent.
+
+The cache configuration is shared by default, connecting to CacheBoost being the consent. To stop it, uncheck **Share the cache configuration with CacheBoost** in the CacheBoost settings: nothing more is sent, and the plugin asks CacheBoost to delete the configurations already received.
+
+No personal user data is sent. Requests are only made when:
+- The plugin is enabled in the CacheBoost settings (deleting a shared configuration is the exception)
 - A valid API key (format: cb_live_...) has been configured
 
 CacheBoost Terms of Service: https://www.cache-boost.com/terms

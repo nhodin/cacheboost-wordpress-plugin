@@ -87,3 +87,67 @@ msgstr ""
 #: admin/settings-page.php
 msgid "Invalid API key. Expected format: cb_live_..."
 msgstr ""
+
+#: admin/settings-page.php
+msgid "Cache diagnostics"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Share the cache configuration with CacheBoost"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin's settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce and multilingual plugins; drop-ins and object cache; the hosting provider; your CacheBoost warming settings."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Never any API key, licence key, password, email address or content. Unchecking the box stops sending and deletes the configuration already sent."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Send now"
+msgstr ""
+
+#. translators: %s: date and time
+#: admin/settings-page.php
+#, php-format
+msgid "Last sent: %s"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Sending…"
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Cache configuration sent."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Cache configuration sent. Nothing changed since the last one."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Connect to CacheBoost first."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "The plugin is disabled: check Enable and save the settings first."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Sharing is turned off: check the box and save the settings first."
+msgstr ""
+
+#: admin/settings-page.php
+msgid "Sharing is turned off: CacheBoost deleted the configuration it had received."
+msgstr ""
+
+#. translators: %s: error detail
+#: admin/settings-page.php
+#, php-format
+msgid "Sending failed: %s"
+msgstr ""
+
+#: includes/class-api-client.php
+msgid "Your API key needs the sites:write scope to share the cache configuration."
+msgstr ""
