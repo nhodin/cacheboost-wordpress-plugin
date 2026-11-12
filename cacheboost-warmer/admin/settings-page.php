@@ -507,6 +507,7 @@ function cbwarmer_render_settings_page(): void {
                                 ['code' => [], 'a' => ['href' => [], 'target' => [], 'rel' => []]]
                             );
                             ?>
+                            <?php echo wp_kses(__('Sharing the cache configuration also needs the <code>sites:write</code> scope.', 'cacheboost-warmer'), ['code' => []]); ?>
                         </p>
                     </td>
                 </tr>
@@ -605,7 +606,7 @@ function cbwarmer_render_settings_page(): void {
                             <?php esc_html_e('Share the cache configuration with CacheBoost', 'cacheboost-warmer'); ?>
                         </label>
                         <p class="description">
-                            <?php esc_html_e('Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin\'s settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce and multilingual plugins; drop-ins and object cache; the hosting provider; your CacheBoost warming settings.', 'cacheboost-warmer'); ?>
+                            <?php esc_html_e('Lets CacheBoost check your cache setup and explain how to fix it. Sent when you connect or save these settings, when a plugin is activated, deactivated or updated, when a cache plugin\'s settings change, and once a day: WordPress, PHP and plugin versions; the cache plugins installed and their cache settings (page cache, lifespan, mobile and logged-in caching, preload, ignored query parameters, CDN purge, number of excluded cookies and URLs); WooCommerce (the customer location setting, the currency plugin, and the paths of the cart, checkout and account pages) and multilingual plugins; the CDN plugins installed (Cloudflare, Fastly, CloudFront, bunny.net, Sucuri, CDN Enabler) and whether they purge the CDN; drop-ins and object cache; the hosting provider; your CacheBoost warming settings.', 'cacheboost-warmer'); ?>
                         </p>
                         <p class="description">
                             <?php esc_html_e('Never any API key, licence key, password, email address or content. Unchecking the box stops sending and deletes the configuration already sent.', 'cacheboost-warmer'); ?>
