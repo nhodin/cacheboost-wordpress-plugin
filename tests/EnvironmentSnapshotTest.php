@@ -41,7 +41,7 @@ class EnvironmentSnapshotTest extends TestCase
     public function test_payload_has_the_contract_keys_in_order(): void
     {
         self::assertSame([
-            'plugin_version', 'wp_version', 'php_version', 'woocommerce', 'multilingual', 'wp_cache_constant',
+            'plugin_version', 'wp_version', 'php_version', 'woocommerce', 'woocommerce_settings', 'woocommerce_pages', 'multilingual', 'wp_cache_constant',
             'advanced_cache_owner', 'object_cache', 'hosting', 'cache_plugins', 'cdn_plugins', 'cacheboost',
         ], array_keys($this->collect()));
     }
@@ -114,7 +114,7 @@ class EnvironmentSnapshotTest extends TestCase
 
         $payload = $this->collect();
 
-        self::assertSame([['slug' => 'cloudflare', 'version' => '4.12.8', 'apo' => true]], $payload['cdn_plugins']);
+        self::assertSame([['slug' => 'cloudflare', 'version' => '4.12.8', 'cdn' => 'cloudflare', 'purges' => true, 'apo' => true]], $payload['cdn_plugins']);
         self::assertStringNotContainsString('SECRET-API-KEY', (string) json_encode($payload));
         self::assertStringNotContainsString('owner@example.com', (string) json_encode($payload));
     }
@@ -199,6 +199,273 @@ class EnvironmentSnapshotTest extends TestCase
         $_SERVER['KINSTA_CACHE_ZONE'] = 'site-zone';
 
         self::assertSame('kinsta', $this->collect()['hosting']);
+    }
+
+    private function setUpWooCommerce(): void
+    {
+        $this->install('woocommerce/woocommerce.php', '9.4.1');
+    }
+
+    public function test_woocommerce_blocks_are_null_without_woocommerce(): void
+    {
+        // Settings left behind by a deactivated WooCommerce say nothing about the site.
+        $this->install('woocommerce/woocommerce.php', '9.4.1', false);
+        $this->options['woocommerce_default_customer_address'] = 'geolocation_ajax';
+
+        $payload = $this->collect();
+
+        self::assertNull($payload['woocommerce_settings']);
+        self::assertNull($payload['woocommerce_pages']);
+    }
+
+    /** @dataProvider customerAddresses */
+    public function test_woocommerce_default_customer_address(mixed $stored, ?string $expected): void
+    {
+        $this->setUpWooCommerce();
+        $this->options['woocommerce_default_customer_address'] = $stored;
+
+        self::assertSame($expected, $this->collect()['woocommerce_settings']['default_customer_address']);
+    }
+
+    public static function customerAddresses(): array
+    {
+        return [
+            'no location'      => ['', ''],
+            'shop base'        => ['base', 'base'],
+            'geolocation'      => ['geolocation', 'geolocation'],
+            'geolocation ajax' => ['geolocation_ajax', 'geolocation_ajax'],
+            'unexpected value' => ['elsewhere', null],
+        ];
+    }
+
+    public function test_woocommerce_default_customer_address_is_base_when_never_saved(): void
+    {
+        $this->setUpWooCommerce();
+
+        self::assertSame(
+            ['default_customer_address' => 'base', 'currency_plugin' => null],
+            $this->collect()['woocommerce_settings']
+        );
+    }
+
+    public function test_woocommerce_currency_plugin(): void
+    {
+        $this->setUpWooCommerce();
+        $this->install('woo-multi-currency/woo-multi-currency.php', '2.2.3');
+
+        self::assertSame('woo-multi-currency', $this->collect()['woocommerce_settings']['currency_plugin']);
+    }
+
+    public function test_inactive_currency_plugin_is_ignored(): void
+    {
+        $this->setUpWooCommerce();
+        $this->install('woocommerce-currency-switcher/index.php', '1.4.3.1', false);
+
+        self::assertNull($this->collect()['woocommerce_settings']['currency_plugin']);
+    }
+
+    /** @dataProvider wcmlModes */
+    public function test_wcml_counts_only_with_multi_currency_on(int $mode, ?string $expected): void
+    {
+        $this->setUpWooCommerce();
+        $this->install('woocommerce-multilingual/wpml-woocommerce.php', '5.4.0');
+        $this->options['_wcml_settings'] = ['enable_multi_currency' => $mode, 'currency_options' => ['EUR' => ['rate' => 'SECRET-LICENCE']]];
+
+        $payload = $this->collect();
+
+        self::assertSame($expected, $payload['woocommerce_settings']['currency_plugin']);
+        self::assertStringNotContainsString('SECRET-LICENCE', (string) json_encode($payload));
+    }
+
+    public static function wcmlModes(): array
+    {
+        return ['disabled' => [0, null], 'independent currencies' => [2, 'woocommerce-multilingual']];
+    }
+
+    public function test_woocommerce_pages_are_translated_paths_only(): void
+    {
+        $this->setUpWooCommerce();
+        $this->options['woocommerce_cart_page_id']     = '11';
+        $this->options['woocommerce_checkout_page_id'] = '12';
+        $this->options['woocommerce_myaccount_page_id'] = '13';
+        $permalinks = [
+            11 => 'https://shop.example.com/carrito/',
+            12 => 'https://shop.example.com/finalizar-compra/?utm=x',
+            13 => 'https://shop.example.com/mi-cuenta/',
+        ];
+        Functions\when('get_permalink')->alias(fn (int $id) => $permalinks[$id] ?? false);
+        Functions\when('wp_parse_url')->alias(fn (string $url, int $component = -1) => parse_url($url, $component));
+
+        self::assertSame(
+            ['cart' => '/carrito/', 'checkout' => '/finalizar-compra/', 'myaccount' => '/mi-cuenta/'],
+            $this->collect()['woocommerce_pages']
+        );
+    }
+
+    public function test_woocommerce_page_not_defined_is_null(): void
+    {
+        $this->setUpWooCommerce();
+        $this->options['woocommerce_cart_page_id']     = '11';
+        $this->options['woocommerce_checkout_page_id'] = '0';
+        // No account page option at all; the cart page was deleted.
+        Functions\when('get_permalink')->justReturn(false);
+        Functions\when('wp_parse_url')->alias(fn (string $url, int $component = -1) => parse_url($url, $component));
+
+        self::assertSame(['cart' => null, 'checkout' => null, 'myaccount' => null], $this->collect()['woocommerce_pages']);
+    }
+
+    /** @dataProvider cdnPlugins */
+    public function test_cdn_plugins(string $basename, string $slug, string $cdn, ?bool $purges): void
+    {
+        $this->install($basename, '1.0.0');
+
+        self::assertSame(
+            [['slug' => $slug, 'version' => '1.0.0', 'cdn' => $cdn, 'purges' => $purges]],
+            $this->collect()['cdn_plugins']
+        );
+    }
+
+    public static function cdnPlugins(): array
+    {
+        return [
+            'fastly'     => ['fastly/purgely.php', 'fastly', 'fastly', true],
+            'cloudfront' => ['c3-cloudfront-clear-cache/c3-cloudfront-clear-cache.php', 'c3-cloudfront-cache-controller', 'cloudfront', true],
+            'bunny'      => ['bunnycdn/bunnycdn.php', 'bunnycdn', 'bunny', false],
+            'keycdn'     => ['cdn-enabler/cdn-enabler.php', 'cdn-enabler', 'keycdn', null],
+        ];
+    }
+
+    public function test_inactive_cdn_plugin_is_not_listed(): void
+    {
+        $this->install('fastly/purgely.php', '1.2.29', false);
+
+        self::assertSame([], $this->collect()['cdn_plugins']);
+    }
+
+    public function test_cdn_plugins_never_leak_credentials(): void
+    {
+        foreach (['fastly/purgely.php', 'c3-cloudfront-clear-cache/c3-cloudfront-clear-cache.php', 'bunnycdn/bunnycdn.php', 'cdn-enabler/cdn-enabler.php', 'cloudflare/cloudflare.php'] as $basename) {
+            $this->install($basename, '1.0.0');
+        }
+        $this->options['fastly-settings-general'] = ['fastly_api_key' => 'SECRET-API-KEY', 'fastly_service_id' => 'SECRET-ZONE'];
+        $this->options['c3_settings']             = ['distribution_id' => 'SECRET-ZONE', 'access_key' => 'SECRET-TOKEN'];
+        $this->options['bunnycdn']                = ['api_key' => 'SECRET-API-KEY', 'pull_zone_id' => 'SECRET-ZONE'];
+        $this->options['cdn_enabler']             = ['url' => 'https://SECRET-LICENCE.kxcdn.com'];
+        $this->options['cloudflare_api_key']      = 'SECRET-API-KEY';
+
+        $json = (string) json_encode($this->collect());
+
+        foreach (['SECRET-API-KEY', 'SECRET-ZONE', 'SECRET-TOKEN', 'SECRET-LICENCE'] as $secret) {
+            self::assertStringNotContainsString($secret, $json);
+        }
+    }
+
+    public function test_sucuri_purge_is_unknown_without_its_option_api(): void
+    {
+        $this->install('sucuri-scanner/sucuri.php', '2.8.1');
+
+        self::assertSame(
+            [['slug' => 'sucuri-scanner', 'version' => '2.8.1', 'cdn' => 'sucuri', 'purges' => null]],
+            $this->collect()['cdn_plugins']
+        );
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_sucuri_purge_follows_its_firewall_setting(): void
+    {
+        require_once __DIR__ . '/Support/SucuriScanOption.php';
+        $this->install('sucuri-scanner/sucuri.php', '2.8.1');
+
+        \SucuriScanOption::$enabled = [];
+        self::assertFalse($this->collect()['cdn_plugins'][0]['purges']);
+
+        \SucuriScanOption::$enabled = [':auto_clear_cache'];
+        self::assertTrue($this->collect()['cdn_plugins'][0]['purges']);
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_sucuri_purge_with_the_constant(): void
+    {
+        define('SUCURI_CLEAR_CACHE_ON_PUBLISH', true);
+        $this->install('sucuri-scanner/sucuri.php', '2.8.1');
+
+        self::assertTrue($this->collect()['cdn_plugins'][0]['purges']);
+    }
+
+    public function test_new_cache_plugins_and_their_tiers(): void
+    {
+        $this->install('jetpack-boost/jetpack-boost.php', '4.5.0');
+        $this->install('speedycache/speedycache.php', '1.4.3');
+        $this->install('batcache/batcache.php', '1.5');
+        $this->install('surge/surge.php', '1.2.1');
+        $this->install('endurance-page-cache/endurance-page-cache.php', '2.3.0');
+        $this->install('runcloud-hub/runcloud-hub.php', '1.1.0');
+
+        $tiers = array_column($this->collect()['cache_plugins'], 'tier', 'slug');
+
+        self::assertSame([
+            'jetpack-boost' => 2, 'speedycache' => 2, 'batcache' => 3, 'surge' => 3,
+            'endurance-page-cache' => 3, 'runcloud-hub' => 3,
+        ], $tiers);
+    }
+
+    /** @dataProvider dropIns */
+    public function test_advanced_cache_owner_of_new_plugins(string $content, string $slug): void
+    {
+        file_put_contents(WP_CONTENT_DIR . '/advanced-cache.php', $content);
+
+        self::assertSame($slug, $this->collect()['advanced_cache_owner']);
+    }
+
+    public static function dropIns(): array
+    {
+        return [
+            'jetpack boost' => ["<?php\n// Boost Cache Plugin - v0.0.3\nrequire_once('/x');\n", 'jetpack-boost'],
+            'speedycache'   => ["<?php\n/*\n* SPEEDYCACHE\n* https://speedycache.com/\n*/\n", 'speedycache'],
+            'batcache'      => ["<?php\n// nananananananananananananananana BATCACHE!!!\n", 'batcache'],
+            'surge'         => ["<?php\n/**\n * Surge advanced-cache.php dropin\n */\n\nnamespace Surge;\n", 'surge'],
+            // Left behind by LiteSpeed Cache before WordPress 5.3.
+            'litespeed'     => ["<?php\ndefine( 'LSCACHE_ADV_CACHE', true );\n", 'litespeed-cache'],
+        ];
+    }
+
+    /** @dataProvider newMultilingualPlugins */
+    public function test_new_multilingual_plugins(string $basename, string $plugin, ?string $lang_in, array $options = []): void
+    {
+        $this->install($basename, '1.0.0');
+        $this->options = $options + $this->options;
+
+        self::assertSame(['plugin' => $plugin, 'lang_in' => $lang_in], $this->collect()['multilingual']);
+    }
+
+    public static function newMultilingualPlugins(): array
+    {
+        return [
+            'translatepress'       => ['translatepress-multilingual/index.php', 'translatepress', 'directory'],
+            'weglot'               => ['weglot/weglot.php', 'weglot', 'directory'],
+            'gtranslate free'      => ['gtranslate/gtranslate.php', 'gtranslate', null, ['GTranslate' => ['pro_version' => '', 'enterprise_version' => '']]],
+            'gtranslate never set' => ['gtranslate/gtranslate.php', 'gtranslate', null],
+            'gtranslate pro'       => ['gtranslate/gtranslate.php', 'gtranslate', 'directory', ['GTranslate' => ['pro_version' => 1, 'enterprise_version' => '']]],
+            'gtranslate business'  => ['gtranslate/gtranslate.php', 'gtranslate', 'subdomain', ['GTranslate' => ['pro_version' => '', 'enterprise_version' => 1]]],
+        ];
+    }
+
+    public function test_watched_options_cover_the_new_blocks(): void
+    {
+        $options = EnvironmentSnapshot::watched_options();
+
+        foreach ([
+            'woocommerce_default_customer_address', 'woocommerce_cart_page_id', 'woocommerce_checkout_page_id',
+            'woocommerce_myaccount_page_id', '_wcml_settings', 'GTranslate', 'speedycache_options', 'jetpack_boost_status_page-cache',
+        ] as $option) {
+            self::assertContains($option, $options);
+        }
     }
 
     public function test_watched_options_cover_level_one_plugins(): void

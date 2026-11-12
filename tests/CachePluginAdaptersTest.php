@@ -12,9 +12,11 @@ use CacheBoostWarmer\CacheEnablerAdapter;
 use CacheBoostWarmer\CachePluginAdapter;
 use CacheBoostWarmer\FlyingPressAdapter;
 use CacheBoostWarmer\HummingbirdAdapter;
+use CacheBoostWarmer\JetpackBoostAdapter;
 use CacheBoostWarmer\LiteSpeedCacheAdapter;
 use CacheBoostWarmer\NginxHelperAdapter;
 use CacheBoostWarmer\ProxyCachePurgeAdapter;
+use CacheBoostWarmer\SpeedyCacheAdapter;
 use CacheBoostWarmer\SuperPageCacheAdapter;
 use CacheBoostWarmer\W3TotalCacheAdapter;
 use CacheBoostWarmer\WpFastestCacheAdapter;
@@ -447,6 +449,71 @@ class CachePluginAdaptersTest extends TestCase
         self::assertSame('cloudflare', $settings['cdn_integration']);
         self::assertTrue($settings['cdn_purge']);
         $this->assertNoSecret($settings);
+    }
+
+    public function test_jetpack_boost_page_cache_module_on(): void
+    {
+        $this->options['jetpack_boost_status_page-cache'] = '1';
+
+        $settings = (new JetpackBoostAdapter())->settings();
+
+        self::assertTrue($settings['page_cache']);
+        self::assertFalse($settings['cdn_purge']);
+    }
+
+    public function test_jetpack_boost_page_cache_module_off_or_missing(): void
+    {
+        self::assertFalse((new JetpackBoostAdapter())->settings()['page_cache']);
+
+        $this->options['jetpack_boost_status_page-cache'] = '';
+        self::assertFalse((new JetpackBoostAdapter())->settings()['page_cache']);
+    }
+
+    public function test_speedycache(): void
+    {
+        $this->options['speedycache_options'] = [
+            'status' => true, 'logged_in_user' => false, 'mobile' => true, 'mobile_theme' => true, 'preload' => true,
+            'purge_interval' => 2, 'purge_interval_unit' => 'days',
+            'varniship' => 'SECRET-TOKEN', 'license' => 'SECRET-LICENCE',
+        ];
+
+        $settings = (new SpeedyCacheAdapter())->settings();
+
+        self::assertTrue($settings['page_cache']);
+        self::assertSame(48, $settings['lifespan_hours']);
+        self::assertTrue($settings['mobile_cache']);
+        self::assertTrue($settings['separate_mobile_cache']);
+        self::assertFalse($settings['logged_in_cache']);
+        self::assertTrue($settings['preload']);
+        $this->assertNoSecret($settings);
+    }
+
+    public function test_speedycache_mobile_without_mobile_theme_is_not_cached(): void
+    {
+        $this->options['speedycache_options'] = ['status' => true, 'mobile' => true, 'mobile_theme' => false];
+
+        $settings = (new SpeedyCacheAdapter())->settings();
+
+        self::assertFalse($settings['mobile_cache']);
+        self::assertFalse($settings['separate_mobile_cache']);
+    }
+
+    /** @dataProvider speedycacheLifespans */
+    public function test_speedycache_lifespan(array $options, ?int $hours): void
+    {
+        $this->options['speedycache_options'] = ['status' => true] + $options;
+
+        self::assertSame($hours, (new SpeedyCacheAdapter())->settings()['lifespan_hours']);
+    }
+
+    public static function speedycacheLifespans(): array
+    {
+        return [
+            'never'      => [[], 0],
+            'hours'      => [['purge_interval' => 6, 'purge_interval_unit' => 'hours'], 6],
+            'exact time' => [['purge_interval' => 1, 'purge_interval_unit' => 'days', 'purge_enable_exact_time' => true, 'purge_exact_time' => '03:00'], 24],
+            'unit unknown' => [['purge_interval' => 1, 'purge_interval_unit' => 'weeks'], null],
+        ];
     }
 
     public function test_nginx_helper(): void

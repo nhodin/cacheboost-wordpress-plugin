@@ -644,3 +644,72 @@ final class ProxyCachePurgeAdapter extends CachePluginAdapter {
         ];
     }
 }
+
+/**
+ * Jetpack Boost 4.x: the page cache module is the option jetpack_boost_status_page-cache
+ * (Status::get_option_name(), app/lib/class-status.php; module slug page_cache). Its other settings live
+ * in a file (wp-content/boost-cache/config.php), not in options. The lifespan is the constant
+ * JETPACK_BOOST_CACHE_DURATION (one hour by default), left unread.
+ */
+final class JetpackBoostAdapter extends CachePluginAdapter {
+    public function slug(): string { return 'jetpack-boost'; }
+    public function tier(): int { return 2; }
+    public function folders(): array { return ['jetpack-boost']; }
+    public function watched_options(): array { return ['jetpack_boost_status_page-cache']; }
+
+    protected function read(): array {
+        return [
+            'page_cache'      => (bool) get_option('jetpack_boost_status_page-cache', false),
+            'cdn_integration' => null,
+            'cdn_purge'       => false,
+        ];
+    }
+}
+
+/**
+ * SpeedyCache 1.4.3: option speedycache_options (speedycache.php), keys status, logged_in_user, mobile,
+ * mobile_theme, preload, purge_interval, purge_interval_unit (main/util.php cache_lifespan()).
+ * Other options of the plugin (speedycache_cdn, speedycache_img…) are not read.
+ */
+final class SpeedyCacheAdapter extends CachePluginAdapter {
+    public function slug(): string { return 'speedycache'; }
+    public function tier(): int { return 2; }
+    public function folders(): array { return ['speedycache']; }
+    public function watched_options(): array { return ['speedycache_options']; }
+
+    protected function read(): array {
+        $o = self::pick(get_option('speedycache_options', []), [
+            'status', 'logged_in_user', 'mobile', 'mobile_theme', 'preload',
+            'purge_interval', 'purge_interval_unit', 'purge_enable_exact_time', 'purge_exact_time',
+        ]);
+
+        // Never expires without an interval; a daily exact time is a 24 hour lifespan; hours or days otherwise.
+        $interval = (int) ($o['purge_interval'] ?? 0);
+        if ($interval <= 0) {
+            $lifespan = 0;
+        } elseif (!empty($o['purge_enable_exact_time']) && !empty($o['purge_exact_time'])) {
+            $lifespan = 24;
+        } elseif (($o['purge_interval_unit'] ?? '') === 'hours') {
+            $lifespan = $interval;
+        } elseif (($o['purge_interval_unit'] ?? '') === 'days') {
+            $lifespan = $interval * 24;
+        } else {
+            $lifespan = null;
+        }
+
+        // With "mobile" on and no mobile theme option, mobile visitors are not cached at all (advanced-cache.php).
+        $mobile = !empty($o['mobile']);
+        $theme  = !empty($o['mobile_theme']);
+
+        return [
+            'page_cache'            => !empty($o['status']),
+            'lifespan_hours'        => $lifespan,
+            'mobile_cache'          => !$mobile || $theme,
+            'separate_mobile_cache' => $mobile && $theme,
+            'logged_in_cache'       => !empty($o['logged_in_user']),
+            'preload'               => !empty($o['preload']),
+            'cdn_integration'       => null,
+            'cdn_purge'             => false,
+        ];
+    }
+}

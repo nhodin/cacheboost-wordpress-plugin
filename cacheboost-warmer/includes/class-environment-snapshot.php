@@ -26,6 +26,17 @@ class EnvironmentSnapshot {
         'WebSharks\\CometCache'         => 'comet-cache',
         'NITROPACK_ADVANCED_CACHE'      => 'nitropack',
         'POWERED_CACHE_PAGE_CACHING'    => 'powered-cache',
+        // Jetpack Boost writes "// Boost Cache Plugin - v0.0.3" (Page_Cache::ADVANCED_CACHE_SIGNATURE).
+        'Boost Cache Plugin'            => 'jetpack-boost',
+        // SpeedyCache copies main/advanced-cache.php, whose header comment is "SPEEDYCACHE".
+        'SPEEDYCACHE'                   => 'speedycache',
+        // Batcache's advanced-cache.php is the plugin's own file.
+        'BATCACHE!!!'                   => 'batcache',
+        // Surge's uninstall.php recognizes its drop-in by this line.
+        'namespace Surge;'              => 'surge',
+        // Not verified: LiteSpeed Cache stopped writing advanced-cache.php with WordPress 5.3 and the marker
+        // is gone from its source. Old files left behind still name it, so they are not reported as unknown.
+        'LSCACHE_ADV_CACHE'             => 'litespeed-cache',
         // Not verified: FlyingPress is not public; its drop-in loads files from the flying-press folder.
         'flying-press'                  => 'flyingpress',
     ];
@@ -59,12 +70,22 @@ class EnvironmentSnapshot {
             new DetectionOnlyAdapter('redis-cache', ['redis-cache']),
             new DetectionOnlyAdapter('object-cache-pro', ['object-cache-pro']),
             new DetectionOnlyAdapter('docket-cache', ['docket-cache']),
+            new JetpackBoostAdapter(),
+            new SpeedyCacheAdapter(),
+            new DetectionOnlyAdapter('batcache', ['batcache']),
+            new DetectionOnlyAdapter('surge', ['surge']),
+            new DetectionOnlyAdapter('endurance-page-cache', ['endurance-page-cache']),
+            new DetectionOnlyAdapter('runcloud-hub', ['runcloud-hub']),
         ];
     }
 
     /** @return string[] Options whose update changes the snapshot. */
     public static function watched_options(): array {
-        $options = ['automatic_platform_optimization', 'icl_sitepress_settings', 'polylang'];
+        $options = [
+            'automatic_platform_optimization', 'icl_sitepress_settings', 'polylang',
+            'woocommerce_default_customer_address', 'woocommerce_cart_page_id', 'woocommerce_checkout_page_id',
+            'woocommerce_myaccount_page_id', '_wcml_settings', 'trp_settings', 'GTranslate',
+        ];
         foreach (self::adapters() as $adapter) {
             $options = array_merge($options, $adapter->watched_options());
         }
@@ -82,6 +103,8 @@ class EnvironmentSnapshot {
             'wp_version'           => (string) get_bloginfo('version'),
             'php_version'          => PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION,
             'woocommerce'          => $this->active_version($installed, ['woocommerce']),
+            'woocommerce_settings' => $this->woocommerce_settings($installed),
+            'woocommerce_pages'    => $this->woocommerce_pages($installed),
             'multilingual'         => $this->multilingual($installed),
             'wp_cache_constant'    => defined('WP_CACHE') && WP_CACHE,
             'advanced_cache_owner' => $this->advanced_cache_owner(),
@@ -137,21 +160,114 @@ class EnvironmentSnapshot {
     }
 
     /**
-     * Cloudflare 4.14.5: its options hold the setting as ['value' => 'on'|'off'|bool, …]
-     * (src/API/Plugin.php, src/WordPress/Hooks.php). The API key and email are separate options, never read.
+     * Active CDN plugins. Only the fields below are sent: every one of these plugins keeps an API key, a token
+     * or a zone / distribution identifier in its own options, and none of them is read.
+     * `purges`: the plugin purges the CDN by itself when content changes, null when it cannot tell.
+     *
+     * - Cloudflare 4.14.5: its options hold the setting as ['value' => 'on'|'off'|bool, …]
+     *   (src/API/Plugin.php, src/WordPress/Hooks.php); it purges on content changes (src/WordPress/Hooks.php).
+     * - Fastly 1.2.29 (purgely.php) and C3 Cloudfront Cache Controller 7.3.2 purge on content changes.
+     * - bunny.net 3.1.1: no content hook (only src/Admin/Controller/CdnCachePurge.php, a button), so false.
+     * - Sucuri 2.8.1: SucuriScanFirewall::shouldAutoClearCache() is the constant SUCURI_CLEAR_CACHE_ON_PUBLISH or
+     *   the plugin setting auto_clear_cache, kept in the plugin's own data file, not in wp_options.
+     * - CDN Enabler 2.0.8 only rewrites URLs.
      */
     private function cdn_plugins(array $installed): array {
-        $cloudflare = $this->find($installed, ['cloudflare']);
-        if ($cloudflare === null || !$cloudflare['active']) return [];
+        $table = [
+            ['cloudflare', ['cloudflare'], 'cloudflare', true],
+            ['fastly', ['fastly'], 'fastly', true],
+            // The wordpress.org folder is c3-cloudfront-clear-cache; the name of the plugin gives the slug.
+            ['c3-cloudfront-cache-controller', ['c3-cloudfront-clear-cache', 'c3-cloudfront-cache-controller'], 'cloudfront', true],
+            ['bunnycdn', ['bunnycdn'], 'bunny', false],
+            ['sucuri-scanner', ['sucuri-scanner'], 'sucuri', 'sucuri'],
+            ['cdn-enabler', ['cdn-enabler'], 'keycdn', null],
+        ];
 
-        $apo = get_option('automatic_platform_optimization', null);
-        $apo = is_array($apo) ? ($apo['value'] ?? false) : false;
+        $plugins = [];
+        foreach ($table as [$slug, $folders, $cdn, $purges]) {
+            $plugin = $this->find($installed, $folders);
+            if ($plugin === null || !$plugin['active']) continue;
 
-        return [[
-            'slug'    => 'cloudflare',
-            'version' => $cloudflare['version'],
-            'apo'     => $apo !== false && $apo !== 'off',
-        ]];
+            $entry = [
+                'slug'    => $slug,
+                'version' => $plugin['version'],
+                'cdn'     => $cdn,
+                // Sucuri's setting has to be asked to the plugin.
+                'purges'  => $purges === 'sucuri' ? $this->sucuri_purges() : $purges,
+            ];
+            if ($slug === 'cloudflare') {
+                $apo = get_option('automatic_platform_optimization', null);
+                $apo = is_array($apo) ? ($apo['value'] ?? false) : false;
+                $entry['apo'] = $apo !== false && $apo !== 'off';
+            }
+            $plugins[] = $entry;
+        }
+        return $plugins;
+    }
+
+    private function sucuri_purges(): ?bool {
+        if (defined('SUCURI_CLEAR_CACHE_ON_PUBLISH')) return true;
+        // The setting lives in the plugin's data file: ask the plugin, whose option API reads it.
+        if (!class_exists('SucuriScanOption')) return null;
+        return \SucuriScanOption::isEnabled(':auto_clear_cache');
+    }
+
+    /**
+     * WooCommerce 9.x: woocommerce_default_customer_address is '' | 'base' | 'geolocation' | 'geolocation_ajax'
+     * (src/Enums/DefaultCustomerAddress.php). "Geolocate (with page caching support)" redirects every visitor
+     * to ?v=<hash> (includes/class-wc-cache-helper.php), which a page cache then stores once per hash.
+     */
+    private function woocommerce_settings(array $installed): ?array {
+        if ($this->active_version($installed, ['woocommerce']) === null) return null;
+
+        $address = get_option('woocommerce_default_customer_address', 'base');
+        return [
+            'default_customer_address' => in_array($address, ['', 'base', 'geolocation', 'geolocation_ajax'], true) ? $address : null,
+            'currency_plugin'          => $this->currency_plugin($installed),
+        ];
+    }
+
+    /**
+     * Currency switchers change prices per visitor, which a page cache has to vary on.
+     * WooCommerce Multilingual (WPML) only counts when its multi-currency mode is on:
+     * _wcml_settings['enable_multi_currency'] is 2 (WCML_MULTI_CURRENCIES_INDEPENDENT, inc/constants.php).
+     * Folders of the Aelia and YITH plugins are not verified against their source.
+     */
+    private function currency_plugin(array $installed): ?string {
+        $plugins = [
+            'woocommerce-multilingual'            => ['woocommerce-multilingual'],
+            'woo-multi-currency'                  => ['woo-multi-currency'],
+            'woocommerce-currency-switcher'       => ['woocommerce-currency-switcher'],
+            'woocommerce-aelia-currencyswitcher'  => ['woocommerce-aelia-currencyswitcher'],
+            'yith-woocommerce-multi-currency'     => ['yith-woocommerce-multi-currency-switcher', 'yith-woocommerce-multi-currency'],
+        ];
+        foreach ($plugins as $slug => $folders) {
+            if ($this->active_version($installed, $folders) === null) continue;
+            if ($slug === 'woocommerce-multilingual') {
+                $wcml = get_option('_wcml_settings', []);
+                if (!is_array($wcml) || (int) ($wcml['enable_multi_currency'] ?? 0) !== 2) continue;
+            }
+            return $slug;
+        }
+        return null;
+    }
+
+    /**
+     * Paths of the cart, checkout and account pages, which a page cache must never store.
+     * They are translated by the site (/carrito/), so the permalink is what counts, not the slug of the default.
+     * Path only: no host, no query.
+     */
+    private function woocommerce_pages(array $installed): ?array {
+        if ($this->active_version($installed, ['woocommerce']) === null) return null;
+
+        $pages = [];
+        foreach (['cart', 'checkout', 'myaccount'] as $page) {
+            $id        = (int) get_option("woocommerce_{$page}_page_id", 0);
+            $permalink = $id > 0 ? get_permalink($id) : false;
+            $path      = is_string($permalink) ? wp_parse_url($permalink, PHP_URL_PATH) : null;
+            $pages[$page] = is_string($path) && $path !== '' ? $path : null;
+        }
+        return $pages;
     }
 
     /**
@@ -174,6 +290,25 @@ class EnvironmentSnapshot {
                 $lang_in = 'parameter';
             }
             return ['plugin' => 'polylang', 'lang_in' => $lang_in];
+        }
+
+        // TranslatePress 3.3.6 builds URLs as /<language>/ only; subdomains need a paid add-on (class-url-converter.php).
+        if ($this->active_version($installed, ['translatepress-multilingual']) !== null) {
+            return ['plugin' => 'translatepress', 'lang_in' => 'directory'];
+        }
+
+        // Weglot 5.4 puts the language code (or its custom slug) first in the path.
+        if ($this->active_version($installed, ['weglot']) !== null) {
+            return ['plugin' => 'weglot', 'lang_in' => 'directory'];
+        }
+
+        // GTranslate 5.0.1: the paid plans change the URL (option GTranslate: pro_version sub-directory,
+        // enterprise_version sub-domain); the free widget translates in the browser, so no language in the URL.
+        if ($this->active_version($installed, ['gtranslate']) !== null) {
+            $settings = get_option('GTranslate', []);
+            $settings = is_array($settings) ? $settings : [];
+            $lang_in  = !empty($settings['enterprise_version']) ? 'subdomain' : (!empty($settings['pro_version']) ? 'directory' : null);
+            return ['plugin' => 'gtranslate', 'lang_in' => $lang_in];
         }
 
         return null;
